@@ -1,5 +1,5 @@
 /**
- * Reference test suite for @jrmarcum/universal-wasm-loader.
+ * Reference test suite for @jrmarcum/universalwasmloader-js.
  * Run with:  deno run --allow-read --allow-net tests/run_tests.js
  *            node --experimental-vm-modules tests/run_tests.js  (Node 22+)
  *            bun tests/run_tests.js

@@ -1,5 +1,5 @@
 {
-  "name": "@jrmarcum/universal-wasm-loader",
+  "name": "@jrmarcum/universalwasmloader-js",
   "version": "1.0.2",
   "exports": "./universal-wasm-loader.js",
   "tasks": {

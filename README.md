@@ -6,42 +6,42 @@ Published to JSR with full build provenance for enhanced supply-chain security.
 
 ## Installation
 
-Install via [JSR](https://jsr.io/@jrmarcum/universal-wasm-loader):
+Install via [JSR](https://jsr.io/@jrmarcum/universalwasmloader-js):
 
 **Deno:**
 
 ```sh
-deno add jsr:@jrmarcum/universal-wasm-loader
+deno add jsr:@jrmarcum/universalwasmloader-js
 ```
 
 **npm:**
 
 ```sh
-npx jsr add @jrmarcum/universal-wasm-loader
+npx jsr add @jrmarcum/universalwasmloader-js
 ```
 
 **Bun:**
 
 ```sh
-bunx jsr add @jrmarcum/universal-wasm-loader
+bunx jsr add @jrmarcum/universalwasmloader-js
 ```
 
 **pnpm:**
 
 ```sh
-pnpm dlx jsr add @jrmarcum/universal-wasm-loader
+pnpm dlx jsr add @jrmarcum/universalwasmloader-js
 ```
 
 **Yarn:**
 
 ```sh
-yarn dlx jsr add @jrmarcum/universal-wasm-loader
+yarn dlx jsr add @jrmarcum/universalwasmloader-js
 ```
 
 **vlt:**
 
 ```sh
-vlt install jsr:@jrmarcum/universal-wasm-loader
+vlt install jsr:@jrmarcum/universalwasmloader-js
 ```
 
 ## Usage
@@ -49,7 +49,7 @@ vlt install jsr:@jrmarcum/universal-wasm-loader
 ### Legacy form — raw exports
 
 ```javascript
-import { wasmImport } from "@jrmarcum/universal-wasm-loader";
+import { wasmImport } from "@jrmarcum/universalwasmloader-js";
 
 const { calculate, version } = await wasmImport("./math.wasm");
 
@@ -62,7 +62,7 @@ console.log("Wasm version:", version);
 Pair a `.wasm` with its companion `.wit` file (auto-detected by replacing `.wasm` → `.wit`) and get a fully ABI-translated proxy back. Bool and string types are handled automatically — no manual encoding needed.
 
 ```javascript
-import { wasmImport } from "@jrmarcum/universal-wasm-loader";
+import { wasmImport } from "@jrmarcum/universalwasmloader-js";
 
 // Loads ./greet.wasm + auto-detects ./greet.wit
 const m = await wasmImport("./greet.wasm", { abi: "wasic" });
@@ -150,8 +150,8 @@ See [SPEC.md](./SPEC.md) for the full cross-language conformance specification.
 Full TypeScript support is included. No `@types` package needed.
 
 ```typescript
-import { wasmImport } from "@jrmarcum/universal-wasm-loader";
-import type { WasmImportOptions } from "@jrmarcum/universal-wasm-loader";
+import { wasmImport } from "@jrmarcum/universalwasmloader-js";
+import type { WasmImportOptions } from "@jrmarcum/universalwasmloader-js";
 
 // Legacy form
 const raw: WebAssembly.Exports = await wasmImport("./module.wasm");
@@ -163,6 +163,6 @@ const m = await wasmImport("./module.wasm", opts);
 
 ## Publishing
 
-This package is published to JSR via GitHub Actions on tag push (`v*`). Each release is attested with [build provenance](https://docs.github.com/en/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds) for supply-chain security.
+This package is published to JSR via GitHub Actions on tag push (`v*`). OIDC provenance is recorded by JSR automatically — no manual token required.
 
 To release a new version: bump `version` in `deno.json`, then run `deno task publish`.

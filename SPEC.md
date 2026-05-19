@@ -2,7 +2,7 @@
 
 Version: 1.0.0  
 Status: Draft  
-Reference implementation: `@jrmarcum/universal-wasm-loader` (JSR)
+Reference implementation: `@jrmarcum/universalwasmloader-js` (JSR)
 
 ---
 
