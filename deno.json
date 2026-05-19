@@ -11,7 +11,9 @@
       "universal-wasm-loader.js",
       "universal-wasm-loader.d.ts",
       "wit-parser.js",
+      "wit-parser.d.ts",
       "abi.js",
+      "abi.d.ts",
       "README.md",
       "SPEC.md"
     ]

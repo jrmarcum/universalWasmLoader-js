@@ -46,6 +46,8 @@ vlt install jsr:@jrmarcum/universal-wasm-loader
 
 ## Usage
 
+### Legacy form — raw exports
+
 ```javascript
 import { wasmImport } from "@jrmarcum/universal-wasm-loader";
 
@@ -55,37 +57,93 @@ console.log("Result:", calculate(10, 20)); // (10 * 20) + 10 = 210
 console.log("Wasm version:", version);
 ```
 
-### With custom imports
+### WIT-aware form — ABI-translated proxy
+
+Pair a `.wasm` with its companion `.wit` file (auto-detected by replacing `.wasm` → `.wit`) and get a fully ABI-translated proxy back. Bool and string types are handled automatically — no manual encoding needed.
 
 ```javascript
 import { wasmImport } from "@jrmarcum/universal-wasm-loader";
 
-const importObject = {
-  env: {
-    memory: new WebAssembly.Memory({ initial: 1 }),
-  },
-};
+// Loads ./greet.wasm + auto-detects ./greet.wit
+const m = await wasmImport("./greet.wasm", { abi: "wasic" });
 
-const exports = await wasmImport("./my-module.wasm", importObject);
+console.log(m.greet("World")); // "Hello, World!"  (string ↔ ptr/len handled internally)
+console.log(m.isEven(4));     // true              (i32 → bool normalised)
+```
+
+### With host import callbacks
+
+When your WASM module imports functions from the host environment, pass them via `imports.env`. The loader maps WIT kebab-case names (`env-mul`) to camelCase JS keys (`envMul`) automatically.
+
+```javascript
+const m = await wasmImport("./math.wasm", {
+  abi: "wasic",
+  imports: {
+    env: {
+      envMul: (a, b) => a * b,
+      envAdd: (a, b) => a + b,
+    },
+  },
+});
+
+console.log(m.scale(3.0, 4.0)); // 12.0
+```
+
+### Explicit WIT path
+
+```javascript
+const m = await wasmImport("./build/module.wasm", {
+  abi: "wasic",
+  wit: "./types/module.wit",
+});
 ```
 
 ## API
 
-### `wasmImport(wasmPath, importObject?)`
+### `wasmImport(wasmPath, options?)`
 
-| Parameter      | Type                  | Description                                                               |
-| -------------- | --------------------- | ------------------------------------------------------------------------- |
-| `wasmPath`     | `string \| URL`       | Path or URL to the `.wasm` file. Resolved relative to the calling module. |
-| `importObject` | `WebAssembly.Imports` | Optional imports passed to the WebAssembly instance.                      |
+**Options-object form** — returns an ABI-translated typed proxy.
 
-**Returns:** `Promise<WebAssembly.Exports>` — the exported members of the instantiated WebAssembly module.
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `options.abi` | `"wasic"` \| `"component"` | `"wasic"` | ABI translation profile. |
+| `options.wit` | `string \| URL` | auto-detected | Path to the `.wit` file (replaces `.wasm` suffix when omitted). |
+| `options.imports` | `{ env?: Record<string, Function> }` | `{}` | Host callbacks matching the WIT `import` section. |
+
+**Returns:** `Promise<Record<string, Function>>` — ABI-translated proxy keyed by camelCase WIT export names.
+
+**Legacy positional form** — returns raw `WebAssembly.Exports`.
+
+```javascript
+wasmImport(wasmPath, importObject?)
+```
+
+The loader uses the legacy form when the second argument contains none of `abi`, `wit`, or `imports`.
+
+### ABI profiles
+
+| Profile | Status | Description |
+| --- | --- | --- |
+| `"wasic"` | Stable | Matches `wasmtk wasic` / `wasmtk modc` Phase 50 bindgen. Default. |
+| `"component"` | Stub | Canonical ABI — throws until wasmtk Stage 0 completes. |
+
+### Type mapping — `"wasic"` profile
+
+| WIT type | JS → WASM | WASM → JS |
+| --- | --- | --- |
+| `s32`, `s64`, `f32`, `f64` | pass as-is | return as-is |
+| `bool` | `value ? 1 : 0` | `result !== 0` |
+| `string` | UTF-8 encode → `__malloc` → write → pass `(ptr, len)` | call fn, read `__str_ret_ptr` / `__str_ret_len` globals |
+
+See [SPEC.md](./SPEC.md) for the full cross-language conformance specification.
 
 ## How It Works
 
 1. Resolves the `.wasm` path relative to the calling module via `import.meta.url`
-2. Uses `WebAssembly.instantiateStreaming` for best performance (browsers, Deno, Bun)
-3. Falls back to `fetch` + `arrayBuffer` + `WebAssembly.instantiate` for environments where streaming is unavailable
-4. Returns `instance.exports` directly — destructure named exports just like ESM imports
+2. Fetches and parses the companion `.wit` file (options-object form only)
+3. Builds ABI translation wrappers for imports and exports
+4. Uses `WebAssembly.instantiateStreaming` for best performance (browsers, Deno, Bun); falls back to `fetch` + `arrayBuffer` + `WebAssembly.instantiate` for Node.js edge cases
+5. Returns an ABI-translated proxy (options form) or raw `instance.exports` (legacy form)
 
 ## TypeScript
 
@@ -93,12 +151,18 @@ Full TypeScript support is included. No `@types` package needed.
 
 ```typescript
 import { wasmImport } from "@jrmarcum/universal-wasm-loader";
+import type { WasmImportOptions } from "@jrmarcum/universal-wasm-loader";
 
-const exports: WebAssembly.Exports = await wasmImport("./module.wasm");
+// Legacy form
+const raw: WebAssembly.Exports = await wasmImport("./module.wasm");
+
+// WIT-aware form
+const opts: WasmImportOptions = { abi: "wasic" };
+const m = await wasmImport("./module.wasm", opts);
 ```
 
 ## Publishing
 
-This package is published to JSR via GitHub Actions on every push to `main`. Each release is attested with [build provenance](https://docs.github.com/en/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds) for supply-chain security.
+This package is published to JSR via GitHub Actions on tag push (`v*`). Each release is attested with [build provenance](https://docs.github.com/en/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds) for supply-chain security.
 
-To release a new version, bump `version` in `deno.json` and push to `main`.
+To release a new version: bump `version` in `deno.json`, then run `deno task publish`.
