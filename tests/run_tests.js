@@ -22,71 +22,46 @@ function assert(label, actual, expected) {
 // ── math_50 ──────────────────────────────────────────────────────────────────
 console.log("\nmath_50 — numeric round-trip");
 {
-  const m = await wasmImport(new URL("./math_50.wasm", import.meta.url));
-  assert("add(3, 4) = 7",      m.add(3, 4),          7);
-  assert("multiply(2.5,4)=10", m.multiply(2.5, 4.0), 10.0);
-  assert("square(5) = 25",     m.square(5),           25);
+  const { add, multiply, square } = await wasmImport(new URL("./math_50.wasm", import.meta.url));
+  assert("add(3, 4) = 7",      add(3, 4),          7);
+  assert("multiply(2.5,4)=10", multiply(2.5, 4.0), 10.0);
+  assert("square(5) = 25",     square(5),           25);
 }
 
 // ── booleans_50 ──────────────────────────────────────────────────────────────
-console.log("\nbooleans_50 — bool normalization (wasic)");
+console.log("\nbooleans_50 — bool normalization");
 {
-  const m = await wasmImport(new URL("./booleans_50.wasm", import.meta.url), {});
-  // Legacy form — raw exports; booleans come back as 0/1
-  assert("isPositive(1.0) = 1",           m.isPositive(1.0),             1);
-  assert("isPositive(-1.0) = 0",          m.isPositive(-1.0),            0);
-  assert("inRange(5,0,10) = 1",           m.inRange(5.0, 0.0, 10.0),    1);
-  assert("isEven(4) = 1",                 m.isEven(4),                   1);
-}
-
-// ── booleans_50 via WIT ───────────────────────────────────────────────────────
-console.log("\nbooleans_50 — bool normalization (wasic, WIT-aware)");
-{
-  const m = await wasmImport(new URL("./booleans_50.wasm", import.meta.url), { abi: "wasic" });
-  assert("isPositive(1.0) = true",        m.isPositive(1.0),             true);
-  assert("isPositive(-1.0) = false",      m.isPositive(-1.0),            false);
-  assert("inRange(5,0,10) = true",        m.inRange(5.0, 0.0, 10.0),    true);
-  assert("inRange(11,0,10) = false",      m.inRange(11.0, 0.0, 10.0),   false);
-  assert("isEven(4) = true",              m.isEven(4),                   true);
-  assert("isEven(3) = false",             m.isEven(3),                   false);
+  const { isPositive, inRange, isEven } = await wasmImport(new URL("./booleans_50.wasm", import.meta.url));
+  assert("isPositive(1.0) = true",        isPositive(1.0),             true);
+  assert("isPositive(-1.0) = false",      isPositive(-1.0),            false);
+  assert("inRange(5,0,10) = true",        inRange(5.0, 0.0, 10.0),    true);
+  assert("inRange(11,0,10) = false",      inRange(11.0, 0.0, 10.0),   false);
+  assert("isEven(4) = true",              isEven(4),                   true);
+  assert("isEven(3) = false",             isEven(3),                   false);
 }
 
 // ── strings_50 ───────────────────────────────────────────────────────────────
 console.log("\nstrings_50 — string params + returns");
 {
-  const m = await wasmImport(new URL("./strings_50.wasm", import.meta.url), { abi: "wasic" });
-  assert('greet("World") = "Hello, World!"', m.greet("World"), "Hello, World!");
-  assert('shout("hi") = "hihi"',             m.shout("hi"),   "hihi");
-  assert('strLen("hello") = 5',              m.strLen("hello"), 5);
+  const { greet, shout, strLen } = await wasmImport(new URL("./strings_50.wasm", import.meta.url));
+  assert('greet("World") = "Hello, World!"', greet("World"), "Hello, World!");
+  assert('shout("hi") = "hihi"',             shout("hi"),   "hihi");
+  assert('strLen("hello") = 5',              strLen("hello"), 5);
 }
 
 // ── imports_50 ───────────────────────────────────────────────────────────────
 console.log("\nimports_50 — host import callbacks");
 {
-  const m = await wasmImport(new URL("./imports_50.wasm", import.meta.url), {
-    abi: "wasic",
-    imports: {
-      env: {
-        envMul: (a, b) => a * b,
-        envAdd: (a, b) => a + b,
-      },
-    },
+  const { scale, combine } = await wasmImport(new URL("./imports_50.wasm", import.meta.url), {
+    envMul: (a, b) => a * b,
+    envAdd: (a, b) => a + b,
   });
-  assert("scale(3.0, 4.0) = 12.0", m.scale(3.0, 4.0), 12.0);
-  assert("combine(10, 7) = 17",    m.combine(10, 7),   17);
-}
-
-// ── raw profile ──────────────────────────────────────────────────────────────
-console.log("\nbooleans_50 — raw profile (no ABI translation)");
-{
-  const m = await wasmImport(new URL("./booleans_50.wasm", import.meta.url), { abi: "raw" });
-  // No ABI translation — booleans come back as 0/1
-  assert("isPositive(1.0) = 1 (raw)",  m.isPositive(1.0),  1);
-  assert("isPositive(-1.0) = 0 (raw)", m.isPositive(-1.0), 0);
+  assert("scale(3.0, 4.0) = 12.0", scale(3.0, 4.0), 12.0);
+  assert("combine(10, 7) = 17",    combine(10, 7),   17);
 }
 
 // ── createSingleton ───────────────────────────────────────────────────────────
-console.log("\ncreeateSingleton — identity across calls");
+console.log("\ncreateSingleton — identity across calls");
 {
   const getMod = createSingleton(new URL("./math_50.wasm", import.meta.url));
   const a = await getMod();
@@ -96,15 +71,12 @@ console.log("\ncreeateSingleton — identity across calls");
 }
 
 // ── createSingleton (WIT-aware) ───────────────────────────────────────────────
-console.log("\ncreateSingleton — WIT-aware (wasic)");
+console.log("\ncreateSingleton — bool normalization");
 {
-  const getMod = createSingleton(
-    new URL("./booleans_50.wasm", import.meta.url),
-    { abi: "wasic" },
-  );
-  const m = await getMod();
-  assert("singleton wasic: isEven(6)=true",  m.isEven(6), true);
-  assert("singleton wasic: isEven(7)=false", m.isEven(7), false);
+  const getMod = createSingleton(new URL("./booleans_50.wasm", import.meta.url));
+  const { isEven } = await getMod();
+  assert("singleton: isEven(6)=true",  isEven(6), true);
+  assert("singleton: isEven(7)=false", isEven(7), false);
 }
 
 // ── InstancePool ──────────────────────────────────────────────────────────────
@@ -120,11 +92,7 @@ console.log("\nInstancePool — run() completes correctly");
 // ── InstancePool concurrent ───────────────────────────────────────────────────
 console.log("\nInstancePool — concurrent run() calls");
 {
-  const pool = new InstancePool(
-    new URL("./booleans_50.wasm", import.meta.url),
-    { abi: "wasic" },
-    2,
-  );
+  const pool = new InstancePool(new URL("./booleans_50.wasm", import.meta.url), {}, 2);
   const [a, b] = await Promise.all([
     pool.run(m => m.isEven(4)),
     pool.run(m => m.isEven(3)),

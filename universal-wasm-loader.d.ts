@@ -1,33 +1,35 @@
-export type WitType = "s32" | "s64" | "f32" | "f64" | "bool" | "string";
-export type AbiProfile = "wasic" | "component" | "raw";
-
-export interface WasmImportOptions<TEnv extends Record<string, unknown> = Record<string, unknown>> {
-  /**
-   * ABI translation profile.
-   * - `"wasic"` (default) — Phase 50 bindgen encoding (`__malloc`, `__str_ret_ptr`/`__str_ret_len`).
-   * - `"component"` — Canonical ABI (`cabi_realloc`, out-parameter string returns).
-   * - `"raw"` — No ABI translation; user env passed directly, raw exports returned.
-   */
-  abi?: AbiProfile;
-  /** Path to the .wit file. Auto-detected by replacing .wasm with .wit when omitted. */
-  wit?: string;
-  /** Host callbacks matching the WIT import section. */
-  imports?: { env?: TEnv };
-}
-
+export type HostCallbacks = Record<string, (...args: unknown[]) => unknown>;
 export type ModuleExports = Record<string, (...args: unknown[]) => unknown>;
 
-/** Legacy positional form — returns raw WebAssembly.Exports. */
+/**
+ * Load a `.wasm` file and return its ABI-translated exports.
+ *
+ * Auto-detects the companion `.wit` file and applies the Canonical ABI (wasmtime).
+ * If no `.wit` file exists, raw `WebAssembly.Exports` are returned instead.
+ *
+ * Append `@N` to the path to pin to a specific module version. The loader
+ * verifies the module's exported `version` global matches `N` and throws if not,
+ * following the C shared-library (SONAME) major-version convention.
+ *
+ * ```ts
+ * // Destructure individual exports
+ * const { greet, isEven } = await wasmImport("./mod.wasm");
+ *
+ * // Or use as a namespace
+ * const m = await wasmImport("./mod.wasm");
+ * m.greet("World");
+ *
+ * // Pin to a specific module version
+ * const { greet } = await wasmImport("./mod.wasm@2");
+ *
+ * // With host import callbacks (flat, camelCase)
+ * const { scale } = await wasmImport("./mod.wasm", { envMul: (a, b) => a * b });
+ * ```
+ */
 export declare function wasmImport(
   wasmPath: string | URL,
-  importObject: WebAssembly.Imports,
-): Promise<WebAssembly.Exports>;
-
-/** Options-object form — returns ABI-translated typed proxy. */
-export declare function wasmImport<TEnv extends Record<string, unknown> = Record<string, unknown>>(
-  wasmPath: string | URL,
-  options?: WasmImportOptions<TEnv>,
-): Promise<ModuleExports>;
+  hostCallbacks?: HostCallbacks,
+): Promise<WebAssembly.Exports | ModuleExports>;
 
 /**
  * Create a singleton accessor that loads the WASM instance on the first call
@@ -37,7 +39,7 @@ export declare function wasmImport<TEnv extends Record<string, unknown> = Record
  */
 export declare function createSingleton(
   wasmPath: string | URL,
-  optionsOrImports?: WebAssembly.Imports | WasmImportOptions,
+  hostCallbacks?: HostCallbacks,
 ): () => Promise<WebAssembly.Exports | ModuleExports>;
 
 /**
@@ -46,7 +48,7 @@ export declare function createSingleton(
  * Manages acquire/release semantics so no two concurrent callers share the same instance.
  */
 export declare class InstancePool {
-  constructor(wasmPath: string | URL, options?: WasmImportOptions, size?: number);
+  constructor(wasmPath: string | URL, hostCallbacks?: HostCallbacks, size?: number);
 
   /** Acquire an available instance. Waits if all are currently in use. */
   acquire(): Promise<WebAssembly.Exports | ModuleExports>;

@@ -46,104 +46,109 @@ vlt install jsr:@jrmarcum/universalwasmloader-js
 
 ## Usage
 
-### Legacy form — raw exports
+### Basic — destructure exports
 
 ```javascript
 import { wasmImport } from "@jrmarcum/universalwasmloader-js";
 
-const { calculate, version } = await wasmImport("./math.wasm");
+const { greet, isEven } = await wasmImport("./mod.wasm");
 
-console.log("Result:", calculate(10, 20)); // (10 * 20) + 10 = 210
-console.log("Wasm version:", version);
+console.log(greet("World")); // "Hello, World!"
+console.log(isEven(4));      // true
 ```
 
-### WIT-aware form — ABI-translated proxy
-
-Pair a `.wasm` with its companion `.wit` file (auto-detected by replacing `.wasm` → `.wit`) and get a fully ABI-translated proxy back. Bool and string types are handled automatically — no manual encoding needed.
+### Namespace style
 
 ```javascript
-import { wasmImport } from "@jrmarcum/universalwasmloader-js";
+const m = await wasmImport("./mod.wasm");
 
-// Loads ./greet.wasm + auto-detects ./greet.wit
-const m = await wasmImport("./greet.wasm", { abi: "wasic" });
+m.greet("World");
+m.isEven(4);
+```
 
-console.log(m.greet("World")); // "Hello, World!"  (string ↔ ptr/len handled internally)
-console.log(m.isEven(4));     // true              (i32 → bool normalised)
+### Version pinning
+
+Append `@N` to pin to a specific major version. The loader checks the module's
+exported `version` global and throws a descriptive error if it doesn't match —
+the same convention C shared libraries use with SONAME major versioning.
+
+```javascript
+const { greet } = await wasmImport("./mod.wasm@2");
+// Throws if the module's exported `version` global !== 2
 ```
 
 ### With host import callbacks
 
-When your WASM module imports functions from the host environment, pass them via `imports.env`. The loader maps WIT kebab-case names (`env-mul`) to camelCase JS keys (`envMul`) automatically.
+When your WASM module calls back into JS, pass the host functions as a flat camelCase object. The loader maps WIT kebab-case names (`env-mul`) to camelCase JS keys (`envMul`) automatically.
 
 ```javascript
-const m = await wasmImport("./math.wasm", {
-  abi: "wasic",
-  imports: {
-    env: {
-      envMul: (a, b) => a * b,
-      envAdd: (a, b) => a + b,
-    },
-  },
+const { scale, combine } = await wasmImport("./math.wasm", {
+  envMul: (a, b) => a * b,
+  envAdd: (a, b) => a + b,
 });
 
-console.log(m.scale(3.0, 4.0)); // 12.0
+console.log(scale(3.0, 4.0)); // 12.0
 ```
 
-### Explicit WIT path
+## How It Works
 
-```javascript
-const m = await wasmImport("./build/module.wasm", {
-  abi: "wasic",
-  wit: "./types/module.wit",
-});
-```
+1. Resolves the `.wasm` path relative to the calling module via `import.meta.url`
+2. Auto-detects the companion `.wit` file by replacing `.wasm` → `.wit`
+3. Applies the Canonical ABI (wasmtime) — bool and string types handled automatically
+4. Uses `WebAssembly.instantiateStreaming` for best performance; falls back to `fetch` + `arrayBuffer` for Node.js edge cases
+5. Returns an ABI-translated proxy keyed by camelCase WIT export names
+
+If no `.wit` file is found, raw `WebAssembly.Exports` are returned.
 
 ## API
 
-### `wasmImport(wasmPath, options?)`
+### `wasmImport(wasmPath, hostCallbacks?)`
 
-**Options-object form** — returns an ABI-translated typed proxy.
-
-| Field | Type | Default | Description |
-| --- | --- | --- | --- |
-| `options.abi` | `"wasic"` \| `"component"` | `"wasic"` | ABI translation profile. |
-| `options.wit` | `string \| URL` | auto-detected | Path to the `.wit` file (replaces `.wasm` suffix when omitted). |
-| `options.imports` | `{ env?: Record<string, Function> }` | `{}` | Host callbacks matching the WIT `import` section. |
-
-**Returns:** `Promise<Record<string, Function>>` — ABI-translated proxy keyed by camelCase WIT export names.
-
-**Legacy positional form** — returns raw `WebAssembly.Exports`.
-
-```javascript
-wasmImport(wasmPath, importObject?)
-```
-
-The loader uses the legacy form when the second argument contains none of `abi`, `wit`, or `imports`.
-
-### ABI profiles
-
-| Profile | Status | Description |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| `"wasic"` | Stable | Matches `wasmtk wasic` / `wasmtk modc` Phase 50 bindgen. Default. |
-| `"component"` | Stub | Canonical ABI — throws until wasmtk Stage 0 completes. |
+| `wasmPath` | `string \| URL` | Path to the `.wasm` file, resolved relative to the calling module. Append `@N` to pin to a major version. |
+| `hostCallbacks` | `Record<string, Function>` | Host functions the WASM module calls into JS. Flat object, camelCase keys. |
 
-### Type mapping — `"wasic"` profile
+**Returns:** `Promise<Record<string, Function>>` — ABI-translated proxy keyed by camelCase WIT export names, or raw `WebAssembly.Exports` if no `.wit` file is found.
+
+### Type mapping
 
 | WIT type | JS → WASM | WASM → JS |
 | --- | --- | --- |
 | `s32`, `s64`, `f32`, `f64` | pass as-is | return as-is |
 | `bool` | `value ? 1 : 0` | `result !== 0` |
-| `string` | UTF-8 encode → `__malloc` → write → pass `(ptr, len)` | call fn, read `__str_ret_ptr` / `__str_ret_len` globals |
+| `string` | UTF-8 encode → `cabi_realloc` → write → pass `(ptr, len)` | allocate 8-byte return area via `cabi_realloc`, read `(ptr, len)` back via `DataView` |
 
 See [SPEC.md](./SPEC.md) for the full cross-language conformance specification.
 
-## How It Works
+### `createSingleton(wasmPath, hostCallbacks?)`
 
-1. Resolves the `.wasm` path relative to the calling module via `import.meta.url`
-2. Fetches and parses the companion `.wit` file (options-object form only)
-3. Builds ABI translation wrappers for imports and exports
-4. Uses `WebAssembly.instantiateStreaming` for best performance (browsers, Deno, Bun); falls back to `fetch` + `arrayBuffer` + `WebAssembly.instantiate` for Node.js edge cases
-5. Returns an ABI-translated proxy (options form) or raw `instance.exports` (legacy form)
+Returns an accessor function that loads the WASM instance on the first call and caches it for all subsequent calls.
+
+```javascript
+const getMod = createSingleton("./mod.wasm");
+const { greet } = await getMod();   // loads on first call
+const same = await getMod();        // returns cached instance
+```
+
+Appropriate for CLI tools and bounded-call scenarios.
+
+### `InstancePool(wasmPath, hostCallbacks?, size?)`
+
+Pre-instantiates `size` (default: 4) independent WASM instances and manages acquire/release semantics for concurrent workloads.
+
+```javascript
+const pool = new InstancePool("./mod.wasm", {}, 4);
+const result = await pool.run(mod => mod.compute(42));
+```
+
+| Method | Description |
+| --- | --- |
+| `acquire()` | Check out an instance. Waits if all are in use. |
+| `release(instance)` | Return an instance to the pool. |
+| `run(fn)` | Acquire, call `fn(instance)`, release — even on throw. |
+
+Appropriate for servers and loop-intensive workloads.
 
 ## TypeScript
 
@@ -151,14 +156,10 @@ Full TypeScript support is included. No `@types` package needed.
 
 ```typescript
 import { wasmImport } from "@jrmarcum/universalwasmloader-js";
-import type { WasmImportOptions } from "@jrmarcum/universalwasmloader-js";
+import type { HostCallbacks } from "@jrmarcum/universalwasmloader-js";
 
-// Legacy form
-const raw: WebAssembly.Exports = await wasmImport("./module.wasm");
-
-// WIT-aware form
-const opts: WasmImportOptions = { abi: "wasic" };
-const m = await wasmImport("./module.wasm", opts);
+const callbacks: HostCallbacks = { envMul: (a, b) => (a as number) * (b as number) };
+const { scale } = await wasmImport("./mod.wasm", callbacks);
 ```
 
 ## Publishing

@@ -1,18 +1,6 @@
 // @ts-self-types="./universal-wasm-loader.d.ts"
 import { parseWit } from "./wit-parser.js";
-import { buildWasicImportEnv, buildWasicExportProxy, buildComponentImportEnv, buildComponentExportProxy } from "./abi.js";
-
-/**
- * Detect whether the second argument is the new options-object form.
- * The legacy form is a plain WebAssembly.Imports (e.g. `{ env: {...} }`).
- * The options form always has at least one of: abi, wit, imports.
- * @param {unknown} v
- * @returns {boolean}
- */
-function isOptionsObject(v) {
-  if (v === null || typeof v !== "object") return false;
-  return "abi" in v || "wit" in v || "imports" in v;
-}
+import { buildComponentImportEnv, buildComponentExportProxy } from "./abi.js";
 
 /**
  * Instantiate a .wasm file from a URL, returning raw exports.
@@ -36,79 +24,102 @@ async function instantiateWasm(url, importObject) {
 }
 
 /**
+ * Parse an optional `@N` version suffix from a wasm path string.
+ * Returns the clean path and the requested version (or null if absent).
+ * @param {string | URL} wasmPath
+ * @returns {{ cleanPath: string, requestedVersion: number | null }}
+ */
+function parseVersionSuffix(wasmPath) {
+  const raw = typeof wasmPath === "string" ? wasmPath : wasmPath.href;
+  const atIdx = raw.lastIndexOf("@");
+  if (atIdx !== -1) {
+    const suffix = raw.slice(atIdx + 1);
+    if (/^\d+$/.test(suffix)) {
+      return { cleanPath: raw.slice(0, atIdx), requestedVersion: parseInt(suffix, 10) };
+    }
+  }
+  return { cleanPath: raw, requestedVersion: null };
+}
+
+/**
+ * Assert that a loaded module's exported `version` global matches the requested version.
+ * @param {WebAssembly.Exports} rawExports
+ * @param {number} requestedVersion
+ * @param {string} wasmPath
+ */
+function assertVersion(rawExports, requestedVersion, wasmPath) {
+  const versionExport = /** @type {WebAssembly.Global|undefined} */ (rawExports["version"]);
+  if (!versionExport || typeof versionExport.value !== "number") {
+    throw new Error(
+      `wasmImport: version @${requestedVersion} requested for "${wasmPath}" but the module does not export a "version" global`,
+    );
+  }
+  if (versionExport.value !== requestedVersion) {
+    throw new Error(
+      `wasmImport: version mismatch for "${wasmPath}" — requested @${requestedVersion}, module exports version ${versionExport.value}`,
+    );
+  }
+}
+
+/**
  * A universal WebAssembly loader that mimics ESM import behavior.
  * Works in Node.js 18+, Bun, Deno, and all modern browsers.
  *
- * **Positional form (legacy):**
- * ```js
- * const { add } = await wasmImport("./math.wasm");
- * const { fn } = await wasmImport("./mod.wasm", { env: { log: console.log } });
- * ```
+ * Auto-detects the companion `.wit` file and applies the Canonical ABI.
+ * If no `.wit` file is found, raw `WebAssembly.Exports` are returned.
  *
- * **Options-object form (WIT-aware):**
+ * An optional `@N` version suffix on the path pins to a specific module
+ * version, matching the C shared-library (SONAME) convention.
+ *
  * ```js
- * const mod = await wasmImport("./mod.wasm", {
- *   abi: "wasic",          // "component" for Canonical ABI; "raw" for no translation
- *   wit: "./mod.wit",      // auto-detected as mod.wit when omitted
- *   imports: {             // host callbacks matching WIT import section
- *     env: { envMul: (a, b) => a * b },
- *   },
+ * // Destructure individual exports
+ * const { greet, isEven } = await wasmImport("./mod.wasm");
+ *
+ * // Or use as a namespace
+ * const m = await wasmImport("./mod.wasm");
+ * m.greet("World");
+ *
+ * // Pin to a specific module version
+ * const { greet } = await wasmImport("./mod.wasm@2");
+ *
+ * // With host import callbacks (flat, camelCase)
+ * const { scale } = await wasmImport("./mod.wasm", {
+ *   envMul: (a, b) => a * b,
  * });
- * mod.greet("World");      // ABI-translated, typed proxy
  * ```
  *
- * @param {string | URL} wasmPath - Path or URL to the .wasm file, resolved relative to the calling module.
- * @param {WebAssembly.Imports | import("./universal-wasm-loader.d.ts").WasmImportOptions} [optionsOrImports]
+ * @param {string | URL} wasmPath - Path or URL to the .wasm file. Append `@N` to pin to a version.
+ * @param {Record<string, Function>} [hostCallbacks] - Host import callbacks keyed by camelCase WIT name.
  * @returns {Promise<WebAssembly.Exports | Record<string, Function>>}
  */
-export async function wasmImport(wasmPath, optionsOrImports = {}) {
-  const wasmUrl = new URL(wasmPath, import.meta.url);
+export async function wasmImport(wasmPath, hostCallbacks = {}) {
+  const { cleanPath, requestedVersion } = parseVersionSuffix(wasmPath);
+  const wasmUrl = new URL(cleanPath, import.meta.url);
 
-  // ── Options-object form ──────────────────────────────────────────────────────
-  if (isOptionsObject(optionsOrImports)) {
-    const opts = /** @type {{ abi?: string, wit?: string, imports?: Record<string,unknown> }} */ (optionsOrImports);
-    const abi = opts.abi ?? "wasic";
-    const userImports = opts.imports ?? {};
-
-    // "raw" profile: pass user env directly, skip WIT parsing, return raw exports.
-    if (abi === "raw") {
-      const envCallbacks = /** @type {Record<string,Function>} */ (userImports.env ?? {});
-      const importObj = /** @type {WebAssembly.Imports} */ (
-        Object.keys(envCallbacks).length ? { env: envCallbacks } : {}
-      );
-      return instantiateWasm(wasmUrl, importObj);
-    }
-
-    // Resolve and parse .wit file (required for wasic and component profiles)
-    const witPath = opts.wit
-      ? new URL(opts.wit, import.meta.url)
-      : new URL(wasmUrl.href.replace(/\.wasm$/, ".wit"));
-
-    const witSrc = await (await fetch(witPath)).text();
-    const parsed = parseWit(witSrc);
-
-    if (abi === "component") {
-      const { env, memRef } = buildComponentImportEnv(parsed.imports, userImports.env);
-      const rawExports = await instantiateWasm(wasmUrl, parsed.imports.length ? { env } : {});
-      if (rawExports["memory"]) {
-        memRef.current = /** @type {WebAssembly.Memory} */ (rawExports["memory"]);
-      }
-      return buildComponentExportProxy(parsed.exports, rawExports);
-    }
-
-    // Default: "wasic"
-    const envCallbacks = /** @type {Record<string,Function>} */ (userImports.env ?? {});
-    const { env, memRef } = buildWasicImportEnv(parsed.imports, envCallbacks);
-    const rawExports = await instantiateWasm(wasmUrl, parsed.imports.length ? { env } : {});
-    if (rawExports["memory"]) {
-      memRef.current = /** @type {WebAssembly.Memory} */ (rawExports["memory"]);
-    }
-    return buildWasicExportProxy(parsed.exports, rawExports);
+  // Attempt WIT auto-detection; fall back to raw exports if absent
+  const witUrl = new URL(wasmUrl.href.replace(/\.wasm$/, ".wit"));
+  let witSrc = null;
+  try {
+    const res = await fetch(witUrl);
+    if (res.ok) witSrc = await res.text();
+  } catch (_e) {
+    // no WIT file available
   }
 
-  // ── Legacy positional form ───────────────────────────────────────────────────
-  const importObject = /** @type {WebAssembly.Imports} */ (optionsOrImports);
-  return instantiateWasm(wasmUrl, importObject);
+  if (!witSrc) {
+    const rawExports = await instantiateWasm(wasmUrl, {});
+    if (requestedVersion !== null) assertVersion(rawExports, requestedVersion, cleanPath);
+    return rawExports;
+  }
+
+  const parsed = parseWit(witSrc);
+  const { env, memRef } = buildComponentImportEnv(parsed.imports, hostCallbacks);
+  const rawExports = await instantiateWasm(wasmUrl, parsed.imports.length ? { env } : {});
+  if (rawExports["memory"]) {
+    memRef.current = /** @type {WebAssembly.Memory} */ (rawExports["memory"]);
+  }
+  if (requestedVersion !== null) assertVersion(rawExports, requestedVersion, cleanPath);
+  return buildComponentExportProxy(parsed.exports, rawExports);
 }
 
 /**
@@ -119,19 +130,19 @@ export async function wasmImport(wasmPath, optionsOrImports = {}) {
  * a bump allocator is not a concern.
  *
  * ```js
- * const getMod = createSingleton("./mod.wasm", { abi: "wasic" });
- * const mod = await getMod();   // loads on first call
- * const same = await getMod();  // returns cached instance
+ * const getMod = createSingleton("./mod.wasm@2");
+ * const { greet } = await getMod();   // loads on first call, version verified
+ * const same = await getMod();        // returns cached instance
  * ```
  *
  * @param {string | URL} wasmPath
- * @param {WebAssembly.Imports | import("./universal-wasm-loader.d.ts").WasmImportOptions} [optionsOrImports]
+ * @param {Record<string, Function>} [hostCallbacks]
  * @returns {() => Promise<WebAssembly.Exports | Record<string, Function>>}
  */
-export function createSingleton(wasmPath, optionsOrImports = {}) {
+export function createSingleton(wasmPath, hostCallbacks = {}) {
   let _promise = null;
   return () => {
-    if (!_promise) _promise = wasmImport(wasmPath, optionsOrImports);
+    if (!_promise) _promise = wasmImport(wasmPath, hostCallbacks);
     return _promise;
   };
 }
@@ -146,19 +157,19 @@ export function createSingleton(wasmPath, optionsOrImports = {}) {
  * across multiple independent linear memories improves longevity under bump allocators.
  *
  * ```js
- * const pool = new InstancePool("./mod.wasm", { abi: "wasic" }, 4);
+ * const pool = new InstancePool("./mod.wasm@2", {}, 4);
  * const result = await pool.run(mod => mod.compute(42));
  * ```
  */
 export class InstancePool {
   /**
    * @param {string | URL} wasmPath
-   * @param {import("./universal-wasm-loader.d.ts").WasmImportOptions} [options]
+   * @param {Record<string, Function>} [hostCallbacks]
    * @param {number} [size] - Number of instances to maintain. Default: 4.
    */
-  constructor(wasmPath, options = {}, size = 4) {
+  constructor(wasmPath, hostCallbacks = {}, size = 4) {
     this._wasmPath = wasmPath;
-    this._options = options;
+    this._hostCallbacks = hostCallbacks;
     this._size = size;
     /** @type {Promise<void>|null} */
     this._initPromise = null;
@@ -172,7 +183,7 @@ export class InstancePool {
   _ensureInit() {
     if (!this._initPromise) {
       this._initPromise = Promise.all(
-        Array.from({ length: this._size }, () => wasmImport(this._wasmPath, this._options)),
+        Array.from({ length: this._size }, () => wasmImport(this._wasmPath, this._hostCallbacks)),
       ).then(instances => { this._available = [...instances]; });
     }
     return this._initPromise;
