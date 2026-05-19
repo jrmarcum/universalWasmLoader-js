@@ -125,17 +125,74 @@ export function buildWasicExportProxy(exportFuncs, rawExports) {
 }
 
 /**
- * Stub for the "component" ABI profile (Canonical ABI).
- * Reserved for when wasmtk Stage 0 completes.
- * @throws {Error}
+ * Build the WASM `env` import object for the "component" ABI profile (Canonical ABI).
+ *
+ * Import-side encoding is identical to "wasic": WASM passes `(ptr, len)` pairs
+ * for string parameters. Set `memRef.current` to `instance.exports.memory` after
+ * instantiation so string-param callbacks can decode from linear memory.
+ *
+ * @param {Array<{name:string,tsName:string,params:Array,result:string|null}>} importFuncs
+ * @param {Record<string,Function>|undefined} userCallbacks
+ * @returns {{ env: Record<string,Function>, memRef: { current: WebAssembly.Memory|null } }}
  */
-export function buildComponentImportEnv(_importFuncs, _userCallbacks) {
-  throw new Error('ABI profile "component" is not yet implemented.');
+export function buildComponentImportEnv(importFuncs, userCallbacks) {
+  return buildWasicImportEnv(importFuncs, userCallbacks);
 }
 
 /**
- * @throws {Error}
+ * Build a typed JS proxy over raw WASM exports using the "component" ABI profile
+ * (Canonical ABI, as produced by wasmtk Stage 0+).
+ *
+ * Differences from "wasic":
+ * - String params: allocate via `cabi_realloc(0, 0, 1, byteLen)` instead of `__malloc`.
+ * - String returns: allocate an 8-byte return area via `cabi_realloc(0, 0, 4, 8)`, pass
+ *   it as a trailing argument, then read `(ptr, len)` back via `DataView` (little-endian).
+ *
+ * @param {Array<{name:string,tsName:string,params:Array,result:string|null}>} exportFuncs
+ * @param {WebAssembly.Exports} rawExports
+ * @returns {Record<string,Function>}
  */
-export function buildComponentExportProxy(_exportFuncs, _rawExports) {
-  throw new Error('ABI profile "component" is not yet implemented.');
+export function buildComponentExportProxy(exportFuncs, rawExports) {
+  const exp = /** @type {Record<string,unknown>} */ (rawExports);
+  const mem = /** @type {WebAssembly.Memory} */ (exp["memory"]);
+  const cabiRealloc = /** @type {(origPtr:number,origLen:number,align:number,newLen:number)=>number} */ (exp["cabi_realloc"]);
+
+  const proxy = {};
+  for (const fn of exportFuncs) {
+    const wasmFn = /** @type {(...a:unknown[])=>unknown} */ (exp[fn.tsName]);
+
+    proxy[fn.tsName] = (...jsArgs) => {
+      const wasmArgs = [];
+      for (let i = 0; i < fn.params.length; i++) {
+        const p = fn.params[i];
+        const v = jsArgs[i];
+        if (p.type === "string") {
+          const bytes = _enc.encode(String(v));
+          const ptr = cabiRealloc(0, 0, 1, bytes.length);
+          new Uint8Array(mem.buffer).set(bytes, ptr);
+          wasmArgs.push(ptr, bytes.length);
+        } else if (p.type === "bool") {
+          wasmArgs.push(v ? 1 : 0);
+        } else {
+          wasmArgs.push(v);
+        }
+      }
+
+      if (fn.result === "string") {
+        const retBuf = cabiRealloc(0, 0, 4, 8);
+        wasmFn(...wasmArgs, retBuf);
+        const dv = new DataView(mem.buffer);
+        const retPtr = dv.getInt32(retBuf, true);
+        const retLen = dv.getInt32(retBuf + 4, true);
+        return _dec.decode(new Uint8Array(mem.buffer, retPtr, retLen));
+      }
+
+      const raw = wasmFn(...wasmArgs);
+      if (fn.result === null) return undefined;
+      if (fn.result === "bool") return raw !== 0;
+      return raw;
+    };
+  }
+
+  return proxy;
 }

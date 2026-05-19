@@ -4,7 +4,7 @@
  *            node --experimental-vm-modules tests/run_tests.js  (Node 22+)
  *            bun tests/run_tests.js
  */
-import { wasmImport } from "../universal-wasm-loader.js";
+import { wasmImport, createSingleton, InstancePool } from "../universal-wasm-loader.js";
 
 let passed = 0;
 let failed = 0;
@@ -74,6 +74,74 @@ console.log("\nimports_50 — host import callbacks");
   });
   assert("scale(3.0, 4.0) = 12.0", m.scale(3.0, 4.0), 12.0);
   assert("combine(10, 7) = 17",    m.combine(10, 7),   17);
+}
+
+// ── raw profile ──────────────────────────────────────────────────────────────
+console.log("\nbooleans_50 — raw profile (no ABI translation)");
+{
+  const m = await wasmImport(new URL("./booleans_50.wasm", import.meta.url), { abi: "raw" });
+  // No ABI translation — booleans come back as 0/1
+  assert("isPositive(1.0) = 1 (raw)",  m.isPositive(1.0),  1);
+  assert("isPositive(-1.0) = 0 (raw)", m.isPositive(-1.0), 0);
+}
+
+// ── createSingleton ───────────────────────────────────────────────────────────
+console.log("\ncreeateSingleton — identity across calls");
+{
+  const getMod = createSingleton(new URL("./math_50.wasm", import.meta.url));
+  const a = await getMod();
+  const b = await getMod();
+  assert("singleton returns same instance", a === b, true);
+  assert("singleton result: add(1,2)=3", a.add(1, 2), 3);
+}
+
+// ── createSingleton (WIT-aware) ───────────────────────────────────────────────
+console.log("\ncreateSingleton — WIT-aware (wasic)");
+{
+  const getMod = createSingleton(
+    new URL("./booleans_50.wasm", import.meta.url),
+    { abi: "wasic" },
+  );
+  const m = await getMod();
+  assert("singleton wasic: isEven(6)=true",  m.isEven(6), true);
+  assert("singleton wasic: isEven(7)=false", m.isEven(7), false);
+}
+
+// ── InstancePool ──────────────────────────────────────────────────────────────
+console.log("\nInstancePool — run() completes correctly");
+{
+  const pool = new InstancePool(new URL("./math_50.wasm", import.meta.url), {}, 2);
+  const r1 = await pool.run(m => m.add(10, 5));
+  const r2 = await pool.run(m => m.square(4));
+  assert("pool.run add(10,5)=15",  r1, 15);
+  assert("pool.run square(4)=16",  r2, 16);
+}
+
+// ── InstancePool concurrent ───────────────────────────────────────────────────
+console.log("\nInstancePool — concurrent run() calls");
+{
+  const pool = new InstancePool(
+    new URL("./booleans_50.wasm", import.meta.url),
+    { abi: "wasic" },
+    2,
+  );
+  const [a, b] = await Promise.all([
+    pool.run(m => m.isEven(4)),
+    pool.run(m => m.isEven(3)),
+  ]);
+  assert("concurrent pool: isEven(4)=true",  a, true);
+  assert("concurrent pool: isEven(3)=false", b, false);
+}
+
+// ── InstancePool acquire/release ─────────────────────────────────────────────
+console.log("\nInstancePool — acquire/release");
+{
+  const pool = new InstancePool(new URL("./math_50.wasm", import.meta.url), {}, 1);
+  const inst = await pool.acquire();
+  assert("acquired instance: add(3,3)=6", inst.add(3, 3), 6);
+  pool.release(inst);
+  const result = await pool.run(m => m.add(7, 8));
+  assert("run after release: add(7,8)=15", result, 15);
 }
 
 // ── summary ──────────────────────────────────────────────────────────────────

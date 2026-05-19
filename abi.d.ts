@@ -29,18 +29,21 @@ export declare function buildWasicExportProxy(
 ): Record<string, (...args: unknown[]) => unknown>;
 
 /**
- * Stub for the "component" ABI profile (Canonical ABI).
- * @throws {Error} Always — not yet implemented.
+ * Build the WASM `env` import object for the "component" ABI profile (Canonical ABI).
+ *
+ * Import-side encoding is identical to "wasic". Set `memRef.current` to
+ * `instance.exports.memory` after instantiation.
  */
 export declare function buildComponentImportEnv(
   importFuncs: WitFunc[],
   userCallbacks: Record<string, (...args: unknown[]) => unknown> | undefined,
-): never;
+): WasicImportEnv;
 
 /**
- * @throws {Error} Always — not yet implemented.
+ * Build a typed JS proxy over raw WASM exports using the "component" ABI profile
+ * (Canonical ABI). Requires `cabi_realloc` to be exported by the WASM module.
  */
 export declare function buildComponentExportProxy(
   exportFuncs: WitFunc[],
   rawExports: WebAssembly.Exports,
-): never;
+): Record<string, (...args: unknown[]) => unknown>;

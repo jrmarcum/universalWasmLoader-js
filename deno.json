@@ -1,6 +1,6 @@
 {
   "name": "@jrmarcum/universalwasmloader-js",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "exports": "./universal-wasm-loader.js",
   "tasks": {
     "test": "deno run --allow-read --allow-net tests/run_tests.js",
