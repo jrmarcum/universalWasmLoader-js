@@ -1,4 +1,4 @@
-# CLAUDE.md — universalWasmLoader
+# CLAUDE.md — universalWasmLoader-js
 
 This file is the single source of project context for AI-assisted development. Keep it up to date as the project evolves.
 
@@ -14,7 +14,7 @@ A lightweight, zero-dependency WebAssembly loader that mimics ESM `import` behav
 ## File Structure
 
 ```
-universalWasmLoader/
+universalWasmLoader-js/
 ├── universal-wasm-loader.js    # Main library — the only published source file
 ├── universal-wasm-loader.d.ts  # TypeScript declarations for the loader
 ├── deno.json                   # JSR package manifest (name, version, exports, publish include-list)

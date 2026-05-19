@@ -2,11 +2,18 @@
   "name": "@jrmarcum/universal-wasm-loader",
   "version": "1.0.1",
   "exports": "./universal-wasm-loader.js",
+  "tasks": {
+    "test": "deno run --allow-read --allow-net tests/run_tests.js",
+    "publish": "deno run --allow-read --allow-write --allow-run --allow-env scripts/publish.ts"
+  },
   "publish": {
     "include": [
       "universal-wasm-loader.js",
       "universal-wasm-loader.d.ts",
-      "README.md"
+      "wit-parser.js",
+      "abi.js",
+      "README.md",
+      "SPEC.md"
     ]
   }
 }
