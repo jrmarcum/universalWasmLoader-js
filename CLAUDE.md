@@ -1,6 +1,13 @@
 # CLAUDE.md — universalWasmLoader-js
 
-This file is the single source of project context for AI-assisted development. Keep it up to date as the project evolves. **All project memory lives here for portability — do not use external memory files.**
+> **⚠️ PORTABLE PROJECT MEMORY NOW LIVES IN `cmem/`** — start at [`cmem/INDEX.md`](cmem/INDEX.md).
+> When saving new project memory, write it into the matching `cmem/` topic file (and refresh its
+> pointer in `cmem/INDEX.md`). The **"update the project memory"** and **"look for code issues"**
+> triggers are defined in `cmem/INDEX.md` and are binding. This `CLAUDE.md` remains as the auto-loaded
+> historical archive; `cmem/` is the source of truth being migrated to.
+
+This file is project context for AI-assisted development. Both `cmem/` and this file are git-tracked
+and portable.
 
 ---
 
