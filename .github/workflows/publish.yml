@@ -13,13 +13,19 @@ jobs:
       id-token: write
 
     steps:
+      # NOTE: This org's Actions policy only permits actions owned by `jrmarcum`.
+      # Third-party actions (actions/checkout, denoland/setup-deno) cause a
+      # `startup_failure` — the workflow never runs a single step. Every step
+      # here MUST therefore be a plain `run:` step. Do not reintroduce `uses:`.
       - name: Checkout
-        uses: actions/checkout@v4
+        run: |
+          git clone --depth=1 --branch ${{ github.ref_name }} \
+            https://x-access-token:${{ github.token }}@github.com/${{ github.repository }} .
 
-      - name: Setup Deno
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
+      - name: Install Deno
+        run: |
+          curl -fsSL https://deno.land/install.sh | sh
+          echo "$HOME/.deno/bin" >> $GITHUB_PATH
 
       - name: Lint
         run: deno lint

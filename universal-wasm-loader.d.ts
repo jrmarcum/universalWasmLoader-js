@@ -1,4 +1,17 @@
+/**
+ * Flat, camelCase map of host functions the WASM module may import (call back into).
+ *
+ * Keys are the camelCase form of the module's WIT import names (e.g. `env-mul` → `envMul`);
+ * each value is the JS implementation the loader wires into the module's import object.
+ */
 export type HostCallbacks = Record<string, (...args: unknown[]) => unknown>;
+
+/**
+ * The ABI-translated exports returned by the loader for a WIT-described module.
+ *
+ * Keys are the camelCase form of the module's WIT export names (e.g. `is-positive` → `isPositive`);
+ * each value is a wrapper that encodes/decodes arguments and results across the Canonical ABI.
+ */
 export type ModuleExports = Record<string, (...args: unknown[]) => unknown>;
 
 /**
@@ -48,6 +61,13 @@ export declare function createSingleton(
  * Manages acquire/release semantics so no two concurrent callers share the same instance.
  */
 export declare class InstancePool {
+  /**
+   * Create a pool that eagerly loads `size` independent instances of the module.
+   *
+   * @param wasmPath Path to the `.wasm` file (optionally with an `@N` version-pin suffix).
+   * @param hostCallbacks Optional flat, camelCase map of host import callbacks.
+   * @param size Number of instances to pre-instantiate (defaults to 4).
+   */
   constructor(wasmPath: string | URL, hostCallbacks?: HostCallbacks, size?: number);
 
   /** Acquire an available instance. Waits if all are currently in use. */

@@ -2,7 +2,7 @@
 
 Version: 3.0.0  
 Status: Draft  
-Reference implementation: `@jrmarcum/universalwasmloader-js` (JSR)
+Reference implementation: `@jrmarcum/universal-wasm-loader` (JSR)
 
 > **3.0.0 (2026-06-15) — breaking ABI change.** String/aggregate returns moved from the old
 > caller-allocated out-parameter convention to the Canonical ABI **callee-allocated** convention:

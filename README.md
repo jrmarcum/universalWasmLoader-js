@@ -6,42 +6,42 @@ Published to JSR with full build provenance for enhanced supply-chain security.
 
 ## Installation
 
-Install via [JSR](https://jsr.io/@jrmarcum/universalwasmloader-js):
+Install via [JSR](https://jsr.io/@jrmarcum/universal-wasm-loader):
 
 **Deno:**
 
 ```sh
-deno add jsr:@jrmarcum/universalwasmloader-js
+deno add jsr:@jrmarcum/universal-wasm-loader
 ```
 
 **npm:**
 
 ```sh
-npx jsr add @jrmarcum/universalwasmloader-js
+npx jsr add @jrmarcum/universal-wasm-loader
 ```
 
 **Bun:**
 
 ```sh
-bunx jsr add @jrmarcum/universalwasmloader-js
+bunx jsr add @jrmarcum/universal-wasm-loader
 ```
 
 **pnpm:**
 
 ```sh
-pnpm dlx jsr add @jrmarcum/universalwasmloader-js
+pnpm dlx jsr add @jrmarcum/universal-wasm-loader
 ```
 
 **Yarn:**
 
 ```sh
-yarn dlx jsr add @jrmarcum/universalwasmloader-js
+yarn dlx jsr add @jrmarcum/universal-wasm-loader
 ```
 
 **vlt:**
 
 ```sh
-vlt install jsr:@jrmarcum/universalwasmloader-js
+vlt install jsr:@jrmarcum/universal-wasm-loader
 ```
 
 ## Usage
@@ -49,7 +49,7 @@ vlt install jsr:@jrmarcum/universalwasmloader-js
 ### Basic — destructure exports
 
 ```javascript
-import { wasmImport } from "@jrmarcum/universalwasmloader-js";
+import { wasmImport } from "@jrmarcum/universal-wasm-loader";
 
 const { greet, isEven } = await wasmImport("./mod.wasm");
 
@@ -155,8 +155,8 @@ Appropriate for servers and loop-intensive workloads.
 Full TypeScript support is included. No `@types` package needed.
 
 ```typescript
-import { wasmImport } from "@jrmarcum/universalwasmloader-js";
-import type { HostCallbacks } from "@jrmarcum/universalwasmloader-js";
+import { wasmImport } from "@jrmarcum/universal-wasm-loader";
+import type { HostCallbacks } from "@jrmarcum/universal-wasm-loader";
 
 const callbacks: HostCallbacks = { envMul: (a, b) => (a as number) * (b as number) };
 const { scale } = await wasmImport("./mod.wasm", callbacks);

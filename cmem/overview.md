@@ -1,7 +1,9 @@
 # Overview — universalWasmLoader-js
 
 The **JS/TS reference implementation** of the Universal WASM Loader (Project 2 of the polyglot
-ecosystem; see `wasmtk`). Published to JSR as `@jrmarcum/universalwasmloader-js`. All other language
+ecosystem; see `wasmtk`). Published to JSR as `@jrmarcum/universal-wasm-loader` (renamed 2026-06-15
+from `@jrmarcum/universalwasmloader-js`; the `deno.json` `name` must exactly equal the JSR package
+name or `deno publish` fails). All other language
 ports (`-rs`, `-py`, `-go`, `-jvm`, `-c`, `-dotnet`) must match this implementation's behavior and
 the cross-language `SPEC.md`.
 
@@ -53,6 +55,15 @@ re-aligned to SPEC 3.0.0.
 Provenance requires the GitHub OIDC token to reach the runner — the workflow has an
 "Check OIDC availability" diagnostic step (added 2026-06-15, mirroring wasmtk) because that org's
 OIDC was found to be environmentally gated.
+
+**`publish.yml` MUST use only `run:` steps — never `uses:` (third-party actions).** This org's Actions
+policy permits only actions owned by `jrmarcum`; any `uses: actions/checkout` / `uses: denoland/setup-deno`
+makes the run end in `startup_failure` (no step executes, so nothing reaches JSR even though the local
+`deno task publish` still creates the tag/release — making it look "published on GitHub" but absent on
+JSR). The v1.0.6 tag hit exactly this when the workflow was briefly switched to external actions
+(2026-06-15); reverted to `git clone` + curl-install-Deno `run:` steps. The triggering workflow file is
+the one **at the tagged commit**, so the tag must point at a commit that already contains a `run:`-only
+`publish.yml`.
 
 ## Producer model + planned capabilities (SPEC §10)
 
