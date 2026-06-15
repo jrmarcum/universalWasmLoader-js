@@ -9,7 +9,7 @@ This file is the single source of project context for AI-assisted development. K
 ### Architectural decisions (current session)
 
 **ABI migration — wasic removed, Canonical ABI only**
-The `"wasic"` ABI profile (Phase 50 bindgen: `__malloc`, `__str_ret_ptr`, `__str_ret_len`) was removed entirely. The only ABI is now the wasmtime Canonical ABI (`cabi_realloc`, out-parameter string returns). This matches the direction of `wasmtk` and the WebAssembly Component Model. The `buildWasicImportEnv` / `buildWasicExportProxy` functions in `abi.js` are gone; `buildComponentImportEnv` / `buildComponentExportProxy` are the sole exports.
+The `"wasic"` ABI profile (Phase 50 bindgen: `__malloc`, `__str_ret_ptr`, `__str_ret_len`) was removed entirely. The only ABI is now the wasmtime Canonical ABI (`cabi_realloc`; **callee-allocated string returns + `cabi_post_<name>`** as of 2026-06-15, SPEC 3.0.0 — previously a caller-allocated out-parameter). This matches the direction of `wasmtk` and the WebAssembly Component Model. The `buildWasicImportEnv` / `buildWasicExportProxy` functions in `abi.js` are gone; `buildComponentImportEnv` / `buildComponentExportProxy` are the sole exports.
 
 **API simplification — no options object**
 `wasmImport(path, options)` was replaced with `wasmImport(path, hostCallbacks?)`. The user specifies only the `.wasm` path and, when needed, a flat camelCase object of host import callbacks. WIT detection and ABI selection are fully automatic. This mirrors ES module import ergonomics and was a deliberate design directive. The `"raw"` and `"component"` profile flags are gone.
@@ -121,7 +121,7 @@ One profile — the Canonical ABI (wasmtime):
 | --- | --- | --- |
 | `s32`, `s64`, `f32`, `f64` | pass as-is | pass as-is |
 | `bool` | `v ? 1 : 0` | `r !== 0` |
-| `string` | TextEncoder → `cabi_realloc(0,0,1,len)` → write → pass `(ptr, len)` | allocate 8-byte return area via `cabi_realloc(0,0,4,8)`, pass as trailing arg, read `(ptr, len)` via `DataView` |
+| `string` | TextEncoder → `cabi_realloc(0,0,1,len)` → write → pass `(ptr, len)` | export returns an i32 ptr to a callee-allocated `[ptr, len]` pair; read via `DataView`, decode, then call `cabi_post_<name>(retPtr)` |
 
 Import callbacks (WASM → JS) use the inverse: `(ptr, len)` pairs decoded from linear memory via `memRef.current`.
 
@@ -158,7 +158,7 @@ Four fixture pairs in `tests/` (must be compiled with `wasmtk` targeting the Can
 | --- | --- | --- |
 | `math_50` | Numeric round-trip (s32, f64) | Ready |
 | `booleans_50` | Bool normalization (i32 ↔ boolean) | Ready |
-| `strings_50` | String params + returns via `cabi_realloc` / out-parameter | Needs recompile |
+| `strings_50` | String params + callee-allocated returns + `cabi_post_<name>` | Regenerated 2026-06-15 (SPEC 3.0.0) |
 | `imports_50` | Host import callbacks via flat env object | Ready |
 
 ## Publishing Workflow

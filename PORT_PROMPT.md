@@ -152,7 +152,7 @@ Reference `abi.js` for the authoritative implementation. Summary:
 | Profile | String param encoding | String return decoding |
 | --- | --- | --- |
 | Wasic | `__malloc(len)` → write bytes → pass `(ptr, len)` | call fn (void), read `__str_ret_ptr` / `__str_ret_len` globals |
-| Component | `cabi_realloc(0,0,1,len)` → write bytes → pass `(ptr, len)` | allocate 8-byte area via `cabi_realloc(0,0,4,8)`, pass as trailing arg, read little-endian i32 pair |
+| Component | `cabi_realloc(0,0,1,len)` → write bytes → pass `(ptr, len)` | call fn → it returns an i32 ptr to a callee-allocated `[ptr, len]` pair; read the little-endian i32 pair, decode, then call `cabi_post_<name>(retPtr)` |
 
 Bool encoding: `true → 1`, `false → 0` on input; `!= 0 → true` on return. Numerics pass through as-is.
 

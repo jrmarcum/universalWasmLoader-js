@@ -1,8 +1,14 @@
 # Universal WASM Loader — Cross-Language Specification
 
-Version: 2.0.0  
+Version: 3.0.0  
 Status: Draft  
 Reference implementation: `@jrmarcum/universalwasmloader-js` (JSR)
+
+> **3.0.0 (2026-06-15) — breaking ABI change.** String/aggregate returns moved from the old
+> caller-allocated out-parameter convention to the Canonical ABI **callee-allocated** convention:
+> the export returns an `i32` pointer to a callee-allocated `[ptr, len]` pair, paired with a
+> `cabi_post_<name>` release export. Loaders and fixtures built for spec 2.x are incompatible — see
+> §4, §5, §9.
 
 ---
 
@@ -100,7 +106,7 @@ For each WIT `export`:
 | `f32` | pass as-is (number) | return as-is |
 | `f64` | pass as-is (number) | return as-is |
 | `bool` | `value ? 1 : 0` | `result !== 0` |
-| `string` | `TextEncoder` → `cabi_realloc(0,0,1,len)` → write bytes → pass `(ptr, len)` | allocate 8-byte return area via `cabi_realloc(0,0,4,8)`, pass as trailing arg, read `(ptr, len)` back via `DataView` (little-endian i32) |
+| `string` | `TextEncoder` → `cabi_realloc(0,0,1,len)` → write bytes → pass `(ptr, len)` | call the export → it returns an `i32` pointer to a callee-allocated `[ptr, len]` pair; read both via `DataView` (little-endian i32), decode, then call `cabi_post_<name>(retPtr)` |
 
 ### Import wrapper (WASM → JS → WASM)
 
@@ -125,12 +131,16 @@ Return values from host callbacks follow the same encoding as export params in r
 3. Write the bytes into WASM linear memory at that pointer.
 4. Pass `(ptr: i32, len: i32)` as two consecutive WASM parameters.
 
-### String returns (export, WASM → JS)
+### String returns (export, WASM → JS) — Canonical ABI callee-allocated
 
-1. Allocate an 8-byte return area: `retBuf = cabi_realloc(0, 0, 4, 8)`.
-2. Call the WASM function with `retBuf` appended as a trailing argument (out-parameter).
-3. Read `retPtr = DataView.getInt32(retBuf, true)` and `retLen = DataView.getInt32(retBuf + 4, true)`.
-4. Decode `memory.buffer[retPtr .. retPtr + retLen]` with `TextDecoder`.
+1. Call the WASM export with the encoded params (no return area is passed in). The export returns
+   an `i32` pointer (`retArea`) to a callee-allocated 8-byte `[ptr, len]` pair.
+2. Read `strPtr = DataView.getInt32(retArea, true)` and `strLen = DataView.getInt32(retArea + 4, true)`.
+3. Decode `memory.buffer[strPtr .. strPtr + strLen]` with `TextDecoder` (this copies the bytes into a
+   JS string, so it remains valid after step 4).
+4. Call the paired `cabi_post_<name>(retArea)` export to release the return buffer, where `<name>` is
+   the camelCase export name. The loader MUST call it when the export exists; under a bump allocator
+   the body is an empty no-op, but the call keeps the contract intact for runtimes that do free.
 
 ### String params (import callbacks, WASM → JS)
 

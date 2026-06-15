@@ -117,7 +117,7 @@ If no `.wit` file is found, raw `WebAssembly.Exports` are returned.
 | --- | --- | --- |
 | `s32`, `s64`, `f32`, `f64` | pass as-is | return as-is |
 | `bool` | `value ? 1 : 0` | `result !== 0` |
-| `string` | UTF-8 encode → `cabi_realloc` → write → pass `(ptr, len)` | allocate 8-byte return area via `cabi_realloc`, read `(ptr, len)` back via `DataView` |
+| `string` | UTF-8 encode → `cabi_realloc` → write → pass `(ptr, len)` | export returns an i32 ptr to a callee-allocated `[ptr, len]` pair; read via `DataView`, then call `cabi_post_<name>` |
 
 See [SPEC.md](./SPEC.md) for the full cross-language conformance specification.
 

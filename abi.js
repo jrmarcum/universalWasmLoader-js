@@ -98,12 +98,18 @@ export function buildComponentExportProxy(exportFuncs, rawExports) {
       }
 
       if (fn.result === "string") {
-        const retBuf = cabiRealloc(0, 0, 4, 8);
-        wasmFn(...wasmArgs, retBuf);
+        // Canonical ABI callee-allocated return: the export returns an i32 pointer to a
+        // callee-allocated [ptr, len] pair. Read it, decode, then call the paired
+        // `cabi_post_<name>` export to release the buffer (no-op under a bump allocator,
+        // but part of the contract). Decoding copies the bytes, so the string survives post.
+        const retArea = /** @type {number} */ (wasmFn(...wasmArgs));
         const dv = new DataView(mem.buffer);
-        const retPtr = dv.getInt32(retBuf, true);
-        const retLen = dv.getInt32(retBuf + 4, true);
-        return _dec.decode(new Uint8Array(mem.buffer, retPtr, retLen));
+        const retPtr = dv.getInt32(retArea, true);
+        const retLen = dv.getInt32(retArea + 4, true);
+        const str = _dec.decode(new Uint8Array(mem.buffer, retPtr, retLen));
+        const post = /** @type {((p:number)=>void)|undefined} */ (exp["cabi_post_" + fn.tsName]);
+        if (typeof post === "function") post(retArea);
+        return str;
       }
 
       const raw = wasmFn(...wasmArgs);
