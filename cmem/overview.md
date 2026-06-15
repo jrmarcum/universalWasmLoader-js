@@ -53,3 +53,14 @@ re-aligned to SPEC 3.0.0.
 Provenance requires the GitHub OIDC token to reach the runner — the workflow has an
 "Check OIDC availability" diagnostic step (added 2026-06-15, mirroring wasmtk) because that org's
 OIDC was found to be environmentally gated.
+
+## Producer model + planned capabilities (SPEC §10)
+
+The loader consumes **reactor/library** modules — the `wasmtk modc` shape (no `_start`; `_initialize`
++ named exports). NOT command (`_start`) modules. A pure-compute library imports nothing → loads with
+an empty import object (the common case). A library that does I/O imports `wasi_snapshot_preview1`
+funcs and needs the host to satisfy them. Two capabilities are specified (SPEC §10) but NOT yet
+implemented in this reference loader: (1) call `_initialize` once after instantiation if exported;
+(2) an optional **minimal WASI-P1 browser shim** (`fd_write`/`proc_exit`/`random_get`/`clock_time_get`
++ `environ`/`args`/`fd_*` stubs) so I/O-using libraries instantiate in the browser. Add these when a
+real I/O-using `modc` library needs consuming.

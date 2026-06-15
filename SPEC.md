@@ -265,3 +265,36 @@ This specification follows [Semantic Versioning](https://semver.org/).
 - **Major** — breaking changes to the core interface, ABI encoding, or test fixture expectations.
 
 The spec version is independent of the package version in `deno.json`. Changes to the spec that require loader updates MUST bump the spec version.
+
+---
+
+## 10. Producer model & WASI modules (informative)
+
+The loader consumes **reactor / library** modules — the shape `wasmtk modc` produces: no `_start`, with
+named exports described by the companion `.wit`. Do **not** feed it **command** modules (a `_start`
+that runs `main` and calls `proc_exit`) — those are executables, not libraries; their exports are not
+meant to be called as a DLL.
+
+### 10.1 `_initialize`
+
+If the module exports `_initialize` (the reactor initializer), a conformant loader SHOULD call it once
+immediately after instantiation and before invoking any other export. (Active data segments are applied
+at instantiation; `_initialize` runs any module constructors / one-time setup.)
+
+### 10.2 WASI imports
+
+Whether a module can be loaded depends on its imports, not on whether it is "WASI":
+
+- A library that performs **no I/O** imports nothing from WASI and instantiates with an empty import
+  object — this is the common, zero-config case (a pure-compute `modc` library).
+- A library that performs **I/O** (e.g. `console.log` → `fd_write`, or `proc_exit`) imports
+  `wasi_snapshot_preview1` functions. To instantiate it, the host MUST satisfy those imports. Browsers
+  have no native WASI, so a conformant loader MAY provide a **minimal WASI Preview 1 shim**. The
+  commonly-needed subset: `fd_write` (stdout/stderr), `proc_exit`, `random_get`, `clock_time_get`,
+  `environ_get`/`environ_sizes_get`, `args_get`/`args_sizes_get`, and the `fd_*` stubs
+  (`fd_close`/`fd_seek`/`fd_fdstat_get`). A pure-compute library needs none of these.
+
+This section is **informative** for v3.0.0. The WASI-P1 shim is currently OPTIONAL; a future spec
+version may promote a minimal shim to a REQUIRED capability so every port can consume I/O-using
+libraries consistently. As of v3.0.0 the reference loader (`-js`) does **not** yet provide a WASI shim
+or call `_initialize` — it loads pure-compute / WIT-`env`-only libraries.
