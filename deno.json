@@ -4,6 +4,8 @@
   "exports": "./universal-wasm-loader.js",
   "tasks": {
     "test": "deno run --allow-read --allow-net tests/run_tests.js",
+    "update-version": "deno run --allow-read --allow-write scripts/sync-version.ts",
+    "bump": "deno run --allow-read --allow-write scripts/bump.ts",
     "publish": "deno run --allow-read --allow-write --allow-run --allow-env scripts/publish.ts"
   },
   "publish": {
