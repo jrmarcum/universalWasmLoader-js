@@ -1,4 +1,23 @@
 // @ts-self-types="./universal-wasm-loader.d.ts"
+/**
+ * A lightweight, zero-dependency WebAssembly loader.
+ *
+ * Loads a `.wasm` module like an ES import: it auto-detects the companion `.wit`
+ * file and applies the Canonical ABI (wasmtime) so the caller receives a typed
+ * proxy keyed by the module's export names. If no `.wit` is found, raw
+ * {@linkcode WebAssembly.Exports} are returned. Works in Node.js 18+, Bun, Deno,
+ * and modern browsers without any configuration.
+ *
+ * @example Basic usage
+ * ```ts
+ * import { wasmImport } from "@jrmarcum/universal-wasm-loader";
+ *
+ * const { greet, isEven } = await wasmImport("./mod.wasm");
+ * greet("World"); // "Hello, World!"
+ * ```
+ *
+ * @module
+ */
 import { parseWit } from "./wit-parser.js";
 import { buildComponentImportEnv, buildComponentExportProxy } from "./abi.js";
 
