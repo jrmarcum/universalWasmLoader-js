@@ -1,4 +1,4 @@
-# CLAUDE.md — universalWasmLoader-js
+# CLAUDE.md — universal-wasm-loader
 
 > **⚠️ PORTABLE PROJECT MEMORY NOW LIVES IN `cmem/`** — start at [`cmem/INDEX.md`](cmem/INDEX.md).
 > When saving new project memory, write it into the matching `cmem/` topic file (and refresh its

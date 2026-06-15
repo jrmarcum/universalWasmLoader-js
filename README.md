@@ -1,4 +1,4 @@
-# universalWasmLoader-js
+# universal-wasm-loader
 
 A lightweight, zero-dependency WebAssembly loader for JavaScript, TypeScript, and the Web. Works in **Node.js 18+**, **Bun**, **Deno**, and all **modern browsers** without any configuration or bundler setup.
 

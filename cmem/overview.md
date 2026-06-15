@@ -1,4 +1,4 @@
-# Overview — universalWasmLoader-js
+# Overview — universal-wasm-loader
 
 The **JS/TS reference implementation** of the Universal WASM Loader (Project 2 of the polyglot
 ecosystem; see `wasmtk`). Published to JSR as `@jrmarcum/universal-wasm-loader` (renamed 2026-06-15

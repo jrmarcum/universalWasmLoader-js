@@ -1,6 +1,6 @@
-# cmem — Portable Project Memory for universalWasmLoader-js
+# cmem — Portable Project Memory for universal-wasm-loader
 
-This folder is the **authoritative, portable project memory** for `universalWasmLoader-js`. It lives
+This folder is the **authoritative, portable project memory** for `universal-wasm-loader`. It lives
 inside the project tree, so it travels with the repo and is committed to git (unlike a machine-local
 `CLAUDE.md`). Keep files small and single-topic — one focused topic file per domain.
 
