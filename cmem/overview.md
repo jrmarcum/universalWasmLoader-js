@@ -65,6 +65,10 @@ JSR). The v1.0.6 tag hit exactly this when the workflow was briefly switched to 
 the one **at the tagged commit**, so the tag must point at a commit that already contains a `run:`-only
 `publish.yml`.
 
+**Published:** `@jrmarcum/universal-wasm-loader@1.0.8` is live on JSR — **score 100**
+(`hasProvenance: true`, `percentageDocumentedSymbols: 1.0`). The `run:`-only workflow delivered
+provenance cleanly.
+
 ## Producer model + planned capabilities (SPEC §10)
 
 The loader consumes **reactor/library** modules — the `wasmtk modc` shape (no `_start`; `_initialize`
