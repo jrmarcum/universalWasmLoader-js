@@ -20,6 +20,19 @@
  */
 import { parseWit } from "./wit-parser.js";
 import { buildComponentImportEnv, buildComponentExportProxy } from "./abi.js";
+import { buildWasiShim } from "./wasi.js";
+
+/**
+ * Call the reactor `_initialize` export once, if present (SPEC §10). `wasmtk modc`
+ * libraries (and other reactor-shaped modules) export `_initialize` for one-time
+ * setup that must run before any other export is called. No-op for command-style
+ * or pure-data modules that don't export it.
+ * @param {WebAssembly.Exports} rawExports
+ */
+function callInitialize(rawExports) {
+  const init = rawExports["_initialize"];
+  if (typeof init === "function") init();
+}
 
 /**
  * Instantiate a .wasm file from a URL, returning raw exports.
@@ -125,18 +138,30 @@ export async function wasmImport(wasmPath, hostCallbacks = {}) {
     // no WIT file available
   }
 
+  // SPEC §10: always provide a minimal WASI-P1 shim so an I/O-using library
+  // module (e.g. a `modc` library that calls `console.log` → `fd_write`)
+  // instantiates even in a host with no native WASI. Unused import namespaces are
+  // ignored by `WebAssembly.instantiate`, so pure-compute modules are unaffected.
+  const wasiMemRef = { current: /** @type {WebAssembly.Memory | null} */ (null) };
+  const wasi = buildWasiShim(wasiMemRef);
+
   if (!witSrc) {
-    const rawExports = await instantiateWasm(wasmUrl, {});
+    const rawExports = await instantiateWasm(wasmUrl, { wasi_snapshot_preview1: wasi });
+    wasiMemRef.current = /** @type {WebAssembly.Memory} */ (rawExports["memory"]) ?? null;
+    callInitialize(rawExports); // SPEC §10
     if (requestedVersion !== null) assertVersion(rawExports, requestedVersion, cleanPath);
     return rawExports;
   }
 
   const parsed = parseWit(witSrc);
   const { env, memRef } = buildComponentImportEnv(parsed.imports, hostCallbacks);
-  const rawExports = await instantiateWasm(wasmUrl, parsed.imports.length ? { env } : {});
-  if (rawExports["memory"]) {
-    memRef.current = /** @type {WebAssembly.Memory} */ (rawExports["memory"]);
-  }
+  const imports = { wasi_snapshot_preview1: wasi };
+  if (parsed.imports.length) imports.env = env;
+  const rawExports = await instantiateWasm(wasmUrl, imports);
+  const mem = /** @type {WebAssembly.Memory | null} */ (rawExports["memory"]) ?? null;
+  memRef.current = mem; // for env string-param decoding
+  wasiMemRef.current = mem; // for the WASI shim
+  callInitialize(rawExports); // SPEC §10
   if (requestedVersion !== null) assertVersion(rawExports, requestedVersion, cleanPath);
   return buildComponentExportProxy(parsed.exports, rawExports);
 }

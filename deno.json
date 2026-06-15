@@ -16,6 +16,8 @@
       "wit-parser.d.ts",
       "abi.js",
       "abi.d.ts",
+      "wasi.js",
+      "wasi.d.ts",
       "README.md",
       "SPEC.md"
     ]

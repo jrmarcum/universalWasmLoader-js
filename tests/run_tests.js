@@ -60,6 +60,24 @@ console.log("\nimports_50 — host import callbacks");
   assert("combine(10, 7) = 17",    combine(10, 7),   17);
 }
 
+// ── SPEC §10 — _initialize ─────────────────────────────────────────────────────
+console.log("\nSPEC §10 — _initialize called after instantiation");
+{
+  // init_check.wasm has no .wit (raw-exports path); its `_initialize` sets a global
+  // to 99 that `getValue` reads — so 99 proves the loader invoked `_initialize`.
+  const m = await wasmImport(new URL("./init_check.wasm", import.meta.url));
+  assert("getValue() = 99 (proves _initialize ran)", m.getValue(), 99);
+}
+
+// ── SPEC §10 — WASI-P1 shim ──────────────────────────────────────────────────────
+console.log("\nSPEC §10 — WASI-P1 shim lets an I/O library instantiate");
+{
+  // wasi_io_50 is a `modc` library that calls console.log → imports fd_write.
+  // Without the loader's WASI-P1 shim it would fail to instantiate (missing import).
+  const { logAndDouble } = await wasmImport(new URL("./wasi_io_50.wasm", import.meta.url));
+  assert("logAndDouble(21) = 42 (instantiated via WASI shim)", logAndDouble(21), 42);
+}
+
 // ── createSingleton ───────────────────────────────────────────────────────────
 console.log("\ncreateSingleton — identity across calls");
 {

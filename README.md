@@ -121,6 +121,14 @@ If no `.wit` file is found, raw `WebAssembly.Exports` are returned.
 
 See [SPEC.md](./SPEC.md) for the full cross-language conformance specification.
 
+### Library modules & I/O (SPEC §10)
+
+The loader consumes **reactor/library** modules (e.g. `wasmtk modc` output). It calls the module's
+`_initialize` export once after instantiation if present, and always supplies a minimal built-in
+**WASI Preview 1 shim**, so a library that does I/O (e.g. `console.log` → `fd_write`) instantiates even
+in the browser. `fd_write` routes stdout→`console.log` and stderr→`console.error`; a pure-compute
+library imports nothing and is unaffected.
+
 ### `createSingleton(wasmPath, hostCallbacks?)`
 
 Returns an accessor function that loads the WASM instance on the first call and caches it for all subsequent calls.

@@ -69,13 +69,23 @@ the one **at the tagged commit**, so the tag must point at a commit that already
 (`hasProvenance: true`, `percentageDocumentedSymbols: 1.0`). The `run:`-only workflow delivered
 provenance cleanly.
 
-## Producer model + planned capabilities (SPEC §10)
+## Producer model + SPEC §10 capabilities (IMPLEMENTED 2026-06-15)
 
 The loader consumes **reactor/library** modules — the `wasmtk modc` shape (no `_start`; `_initialize`
-+ named exports). NOT command (`_start`) modules. A pure-compute library imports nothing → loads with
-an empty import object (the common case). A library that does I/O imports `wasi_snapshot_preview1`
-funcs and needs the host to satisfy them. Two capabilities are specified (SPEC §10) but NOT yet
-implemented in this reference loader: (1) call `_initialize` once after instantiation if exported;
-(2) an optional **minimal WASI-P1 browser shim** (`fd_write`/`proc_exit`/`random_get`/`clock_time_get`
-+ `environ`/`args`/`fd_*` stubs) so I/O-using libraries instantiate in the browser. Add these when a
-real I/O-using `modc` library needs consuming.
++ named exports). NOT command (`_start`) modules. Both SPEC §10 capabilities are now **implemented**:
+
+1. **`_initialize`** — `callInitialize()` in `universal-wasm-loader.js` calls the export once after
+   instantiation (both the WIT and raw-exports paths), if present. (`wasmtk modc` doesn't currently
+   emit `_initialize`, but other reactor producers — Rust/Zig/TinyGo — do; guarded, so it's a no-op
+   otherwise.) Tested via the hand-written `tests/init_check.wasm` (its `_initialize` sets a global to
+   99 that `getValue` reads back).
+2. **WASI-P1 shim** — `wasi.js` `buildWasiShim(memRef)` is always merged into the import object as
+   `wasi_snapshot_preview1` (unused namespace is ignored, so pure-compute modules are unaffected).
+   Covers `fd_write` (stdout→`console.log` / stderr→`console.error`), `proc_exit` (throws),
+   `random_get`, `clock_time_get`, and `environ`/`args`/`fd_*` stubs. Reads/writes memory via a
+   `memRef` set after instantiation. Tested via `tests/wasi_io_50.wasm` (a `modc` library that calls
+   `console.log` → imports `fd_write`; without the shim it would fail to instantiate). Suite now 26/26.
+
+`wasi.js`/`wasi.d.ts` added to the `deno.json` publish include-list. The public API is unchanged
+(`buildWasiShim` is internal). **Other ports SHOULD mirror both** (SPEC §10). Next publish: minor bump
+(additive) — `deno task bump minor`.

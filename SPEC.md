@@ -296,5 +296,8 @@ Whether a module can be loaded depends on its imports, not on whether it is "WAS
 
 This section is **informative** for v3.0.0. The WASI-P1 shim is currently OPTIONAL; a future spec
 version may promote a minimal shim to a REQUIRED capability so every port can consume I/O-using
-libraries consistently. As of v3.0.0 the reference loader (`-js`) does **not** yet provide a WASI shim
-or call `_initialize` — it loads pure-compute / WIT-`env`-only libraries.
+libraries consistently. **The reference loader (`-js`) implements BOTH §10 capabilities as of
+2026-06-15:** it calls `_initialize` once after instantiation when the export is present, and always
+provides a minimal `wasi_snapshot_preview1` shim (the subset listed in §10.2; `fd_write` routes
+stdout→`console.log` / stderr→`console.error`). Pure-compute modules are unaffected (the unused import
+namespace is ignored). Other ports SHOULD follow.
