@@ -87,7 +87,9 @@ one either); the dropped rule list at that point is "recommended" minus what the
    and gives the pattern for a caller-chosen folder:
    `wasmImport(new URL("./wasm_modules/mod.wasm", import.meta.url))`. Measured 2026-10-12 from
    a scratch folder on Bun, Node 24 and Deno: plain load, `@1` pin and `@2` mismatch all behave.
-   **Still open, 🗓️ OWNER:** `SPEC.md` §2 (`wasmPath` row) still says "resolved relative to the
-   calling module", which is the contract for the nine other ports. It was left untouched, because
-   editing it changes that contract.
+   ✅ DECIDED (owner, 2026-10-12): **`SPEC.md` stays unchanged.** Its `wasmPath` row ("resolved
+   relative to the calling module") remains the contract for the other-language ports. Owner: "The
+   other loaders are not associated with node, so keeping them the same is desirable." The JS
+   loader's resolution against its own `import.meta.url` is an ACCEPTED JS-specific difference,
+   documented in the README only. Do not "fix" either side to match the other.
 4. **Browser RUN** (not just bundle) is unmeasured, as in binaryang.
