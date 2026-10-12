@@ -5,10 +5,10 @@ lists what is still open. Close an item by striking it here with the commit that
 
 ## Dated
 
-- **Node 26 becomes LTS on 2026-10-28** → add a CI leg in `.github/workflows/ci.yml` (`runtimes`)
-  and `fnm install 26` locally (`bun run lts` FAILS naming it until then, on purpose). The loader is
-  plain JS, so Node 26's removal of `--experimental-transform-types` does not affect it.
-  [bun-migration.md](bun-migration.md) item 2.
+- ✅ **Node 26** (LTS on 2026-10-28): installed in fnm (26.11.1) and measured 2026-10-12: suite
+  24/24, `compat.ts`, the gate self-test and `how-to-use.js` all pass. CI leg added the same day.
+  `bun run lts` adds it by itself on 2026-10-28 (it reads Node's schedule). Remaining on that
+  date: confirm `bun run lts` shows 3 lines.
 - **Replace `deno lint` before Deno's end (~2027-10)** with a Deno-free linter; list the dropped
   rules when doing so. CI runs `deno lint --rules-exclude=no-sloppy-imports`; why that rule began
   firing on `abi.d.ts` is UNMEASURED. binaryang has not chosen a linter either.
