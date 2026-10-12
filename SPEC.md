@@ -264,7 +264,7 @@ This specification follows [Semantic Versioning](https://semver.org/).
 - **Minor** — new optional parameters, additive behavior. Backward compatible.
 - **Major** — breaking changes to the core interface, ABI encoding, or test fixture expectations.
 
-The spec version is independent of the package version in `deno.json`. Changes to the spec that require loader updates MUST bump the spec version.
+The spec version is independent of the package version in `jsr.json`. Changes to the spec that require loader updates MUST bump the spec version.
 
 ---
 

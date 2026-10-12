@@ -1,0 +1,23 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test ./tests/loader.test.js",
+    "test:node": "node --test tests/loader.test.js",
+    "test:deno": "deno test --allow-read --allow-env tests/loader.test.js",
+    "check": "tsc -p tsconfig.json",
+    "manifest": "bun scripts/check-manifest.ts",
+    "browser": "bun scripts/check-browser.ts",
+    "lts": "bun scripts/check-lts.ts",
+    "lint": "deno lint --rules-exclude=no-sloppy-imports",
+    "gate": "bun run check && bun run manifest && bun run browser && bun run test",
+    "bump": "bun scripts/bump.ts",
+    "release": "bun scripts/publish.ts",
+    "publish:dry": "deno publish --dry-run --allow-dirty"
+  },
+  "devDependencies": {
+    "@std/assert": "npm:@jsr/std__assert@^1.0.0",
+    "@types/node": "~22.18.0",
+    "typescript": "7.0.2"
+  }
+}

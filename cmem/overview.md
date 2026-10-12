@@ -2,15 +2,16 @@
 
 The **JS/TS reference implementation** of the Universal WASM Loader (Project 2 of the polyglot
 ecosystem; see `wasmtk`). Published to JSR as `@jrmarcum/universal-wasm-loader` (renamed 2026-06-15
-from `@jrmarcum/universalwasmloader-js`; the `deno.json` `name` must exactly equal the JSR package
-name or `deno publish` fails). All other language
+from `@jrmarcum/universalwasmloader-js`; the manifest `name` — `jsr.json` since the 2026-10-12 Bun
+migration, `deno.json` before — must exactly equal the JSR package name or `deno publish` fails). All other language
 ports (`-rs`, `-py`, `-go`, `-jvm`, `-c`, `-dotnet`) must match this implementation's behavior and
 the cross-language `SPEC.md`.
 
 ## What it does
 
 Loads a `.wasm` module like an ESM import, auto-detecting its companion `.wit` and applying the
-Canonical ABI so the caller gets a typed JS proxy. Works in Deno, Node 18+, Bun, and browsers.
+Canonical ABI so the caller gets a typed JS proxy. Works in Deno, Node 22.18+, Bun, and browsers
+(Node with local files only since the 2026-10-12 `file:` URL fix — see [bun-migration.md](bun-migration.md)).
 
 ## Public surface (`universal-wasm-loader.js`)
 
@@ -42,16 +43,19 @@ re-aligned to SPEC 3.0.0.
 
 ## Tests
 
-`deno task test` runs `tests/run_tests.js` against fixtures produced by `wasmtk`
-(`math_50` / `booleans_50` / `strings_50` / `imports_50`) plus the lifecycle scenarios
-(`createSingleton`, `InstancePool`). Current: **24/24**. `strings_50.wasm` was regenerated
-2026-06-15 with the new ABI.
+`bun run test` (also `test:node`, `test:deno`) runs `tests/loader.test.js` (`node:test` +
+`@std/assert`, since 2026-10-12; `tests/run_tests.js` before) against fixtures produced by `wasmtk`
+(`math_50` / `booleans_50` / `strings_50` / `imports_50` / `wasi_io_50`, plus the hand-written
+`init_check`) and the lifecycle scenarios (`createSingleton`, `InstancePool`). Current (2026-10-12):
+**26 assertions in 24 tests, 24/24 on Bun 1.4.3, Node 22 + 24, Deno 2.9.7**. `strings_50.wasm` was
+regenerated 2026-06-15 with the new ABI.
 
 ## Release flow
 
-`deno.json` version is the package version. `deno task bump [patch|minor|major]` raises it (runs
-`sync-version.ts`, a no-op for this single-manifest package); `deno task publish` commits, tags
-`vX.Y.Z`, and pushes → the `publish.yml` GitHub Action runs `deno publish` with OIDC provenance.
+`jsr.json` version is the package version (since 2026-10-12; `deno.json` before). `bun run bump
+[patch|minor|major]` raises it; `bun run release` commits, tags `vX.Y.Z`, and pushes → the
+`publish.yml` GitHub Action runs the Bun gate, then `deno publish` with OIDC provenance, then checks
+`rekorLogId` on `api.jsr.io`.
 Provenance requires the GitHub OIDC token to reach the runner — the workflow has an
 "Check OIDC availability" diagnostic step (added 2026-06-15, mirroring wasmtk) because that org's
 OIDC was found to be environmentally gated.
@@ -86,6 +90,6 @@ The loader consumes **reactor/library** modules — the `wasmtk modc` shape (no 
    `memRef` set after instantiation. Tested via `tests/wasi_io_50.wasm` (a `modc` library that calls
    `console.log` → imports `fd_write`; without the shim it would fail to instantiate). Suite now 26/26.
 
-`wasi.js`/`wasi.d.ts` added to the `deno.json` publish include-list. The public API is unchanged
+`wasi.js`/`wasi.d.ts` added to the publish include-list (now in `jsr.json`). The public API is unchanged
 (`buildWasiShim` is internal). **Other ports SHOULD mirror both** (SPEC §10). Next publish: minor bump
-(additive) — `deno task bump minor`.
+(additive) — `bun run bump minor`.

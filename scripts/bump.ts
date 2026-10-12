@@ -1,29 +1,30 @@
 /**
- * Increments the `version` field in deno.json, then runs sync-version.ts to propagate
- * the new version to any secondary manifests (currently a no-op for this package).
+ * Increments the `version` field in jsr.json, the package's one manifest (Bun migration,
+ * 2026-10-12; deno.json before that).
  *
- * Run via:  deno task bump            # patch:  1.0.5 → 1.0.6
- *           deno task bump minor      # minor:  1.0.5 → 1.1.0
- *           deno task bump major      # major:  1.0.5 → 2.0.0
+ * Run via:  bun run bump            # patch:  1.0.5 → 1.0.6
+ *           bun run bump minor      # minor:  1.0.5 → 1.1.0
+ *           bun run bump major      # major:  1.0.5 → 2.0.0
  *
- * Unlike `update-version` (which only re-propagates the EXISTING deno.json version), this
- * RAISES the deno.json version first. Must be run from the project root (deno task does this).
+ * Written on `node:` builtins only, so it runs on Bun, Node and Deno alike.
  */
+import { readFileSync, writeFileSync } from "node:fs";
+import process from "node:process";
+import { fileURLToPath } from "node:url";
 
-const root = Deno.cwd();
-const denoJsonPath = `${root}/deno.json`;
+const manifestPath = fileURLToPath(new URL("../jsr.json", import.meta.url));
 
-const kind = (Deno.args[0] ?? "patch").toLowerCase();
+const kind = (process.argv[2] ?? "patch").toLowerCase();
 if (kind !== "patch" && kind !== "minor" && kind !== "major") {
   console.error(`❌ bump: unknown release kind "${kind}" — use patch | minor | major`);
-  Deno.exit(1);
+  process.exit(1);
 }
 
-const text = await Deno.readTextFile(denoJsonPath);
+const text = readFileSync(manifestPath, "utf8");
 const m = text.match(/("version"\s*:\s*)"(\d+)\.(\d+)\.(\d+)"/);
 if (!m) {
-  console.error('❌ bump: could not find a "version": "X.Y.Z" field in deno.json');
-  Deno.exit(1);
+  console.error('❌ bump: could not find a "version": "X.Y.Z" field in jsr.json');
+  process.exit(1);
 }
 
 let [major, minor, patch] = [Number(m[2]), Number(m[3]), Number(m[4])];
@@ -40,10 +41,7 @@ if (kind === "major") {
 }
 const to = `${major}.${minor}.${patch}`;
 
-// Targeted replace so the rest of deno.json's formatting is untouched.
+// Targeted replace so the rest of jsr.json's formatting is untouched.
 const updated = text.replace(/("version"\s*:\s*)"\d+\.\d+\.\d+"/, `$1"${to}"`);
-await Deno.writeTextFile(denoJsonPath, updated);
-console.log(`✅ deno.json     → ${to}  (${kind} bump from ${from})`);
-
-// Propagate the freshly-written version to any secondary manifests (no-op today).
-await import("./sync-version.ts");
+writeFileSync(manifestPath, updated);
+console.log(`✅ jsr.json → ${to}  (${kind} bump from ${from})`);

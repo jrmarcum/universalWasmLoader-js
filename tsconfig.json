@@ -1,0 +1,30 @@
+{
+  // The type check for Bun and Node (Bun migration, 2026-10-12). Neither runtime checks types,
+  // and `deno check` is going away with Deno, so `tsc` is the check.
+  //
+  // Scope: the published `.d.ts` files (what JSR serves to every consumer) and scripts/. The
+  // shipped `.js` is hand-written and typed by those `.d.ts` files through `@ts-self-types`, so it
+  // is not checked here.
+  //
+  // `types: ["node"]` and NOT bun: code must run on Bun and Node (owner, 2026-10-12), so a
+  // Bun-only API has to fail this check. @types/node is pinned to 22.18, the Node floor, so an
+  // API newer than the floor fails it too.
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "lib": ["esnext", "dom"],
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "skipLibCheck": false
+  },
+  "include": ["*.d.ts", "scripts/**/*.ts"]
+}
