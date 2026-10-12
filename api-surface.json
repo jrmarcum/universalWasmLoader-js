@@ -1,0 +1,17 @@
+{
+  "spec": "3.0.0",
+  "exports": {
+    ".": "./universal-wasm-loader.js"
+  },
+  "symbols": {
+    "InstancePool#acquire": "acquire(): Promise<WebAssembly.Exports | ModuleExports>",
+    "InstancePool#constructor": "constructor(wasmPath: string | URL, hostCallbacks?: HostCallbacks, size?: number)",
+    "InstancePool#release": "release(instance: WebAssembly.Exports | ModuleExports): void",
+    "InstancePool#run": "run<T>(fn: (instance: WebAssembly.Exports | ModuleExports) => T | Promise<T>): Promise<T>",
+    "class InstancePool": "export declare class InstancePool",
+    "function createSingleton": "export declare function createSingleton(wasmPath: string | URL, hostCallbacks?: HostCallbacks): () => Promise<WebAssembly.Exports | ModuleExports>;",
+    "function wasmImport": "export declare function wasmImport(wasmPath: string | URL, hostCallbacks?: HostCallbacks): Promise<WebAssembly.Exports | ModuleExports>;",
+    "type HostCallbacks": "export type HostCallbacks = Record<string, (...args: unknown[]) => unknown>;",
+    "type ModuleExports": "export type ModuleExports = Record<string, (...args: unknown[]) => unknown>;"
+  }
+}

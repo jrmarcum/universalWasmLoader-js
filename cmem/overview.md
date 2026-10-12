@@ -59,7 +59,8 @@ regenerated 2026-06-15 with the new ABI.
 ## Release flow
 
 `jsr.json` version is the package version (since 2026-10-12; `deno.json` before). `bun run bump
-[patch|minor|major]` raises it; `bun run release` commits, tags `vX.Y.Z`, and pushes → the
+[patch|minor|major]` raises it, after the compatibility gate allows that level
+([compat-gate.md](compat-gate.md)); `bun run release` commits, tags `vX.Y.Z`, and pushes → the
 `publish.yml` GitHub Action runs the Bun gate, then `deno publish` with OIDC provenance, then checks
 `rekorLogId` on `api.jsr.io`. `bun run release` spawns plain `git`; that works on this exFAT drive
 because the repo's path is in the global `safe.directory` list (added 2026-10-12).

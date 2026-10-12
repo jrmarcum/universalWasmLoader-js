@@ -23,13 +23,15 @@ lists what is still open. Close an item by striking it here with the commit that
 
 ## Workspace letters (`../../cmem/handoffs.md`)
 
-- **H6 (every repo)**: SemVer is met (`bun run bump` edits a plain `X.Y.Z`). Still open: the
-  compatibility gate (for the loaders: run the PREVIOUS tag's tests against new source, plus a
-  `SPEC.md` version assertion; `../../cmem/open-work.md` § "the compatibility gate"), the ★ rules
-  block copied into a `best-practices.md`, the memory layout per `../../cmem/memory-conventions.md`.
+- ✅ **H6 (every repo), DONE 2026-10-12 on branch `h6`** (owner: "lets implement the H6 item"):
+  SemVer was already met; the ★ block `4048256` ([best-practices.md](best-practices.md)); the
+  compatibility gate `f3da283` ([compat-gate.md](compat-gate.md)); the memory layout (`CLAUDE.md`
+  → pointer, [design-decisions.md](design-decisions.md), [working-rules.md](working-rules.md),
+  `.gitattributes` LF pin) in the commit after. The workspace letter closes when the owner closes it.
+  Not done: Rule 3's CONSUMER half — no known consumer runs a suite ([compat-gate.md](compat-gate.md)).
 - **H7 (all loaders)**: one `wasmtk modc` run regenerates every loader's fixtures, stamped (S4/L3);
-  L1–L8. Which L-items apply to the JS loader is NOT yet checked (L2 "cut the tracked pointers" may
-  mean trimming `CLAUDE.md` to a pointer).
+  L1–L8. Which L-items apply to the JS loader is NOT yet checked (L2 "cut the tracked pointers" is
+  likely the `CLAUDE.md` → pointer cut, done under H6).
 
 ## To hand over (not this repo's to fix)
 

@@ -27,11 +27,12 @@ jobs:
     steps:
       # GITHUB_REF is refs/heads/<branch> on a push and refs/pull/<n>/merge on a pull request;
       # both can be fetched by name, which a `git clone --branch` cannot do for the second.
+      # Full history and the tags: the compatibility gate compares with the last release tag.
       - name: Checkout
         run: |
           git init -q .
           git remote add origin https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
-          git fetch -q --depth=1 origin "$GITHUB_REF"
+          git fetch -q --tags origin "$GITHUB_REF"
           git checkout -q FETCH_HEAD
 
       - name: Install Bun
@@ -50,6 +51,21 @@ jobs:
       # jsr.json is the one manifest: no deno.json carrying name/version, no package.json version.
       - name: One manifest
         run: bun run manifest
+
+      # Compatibility gate (letter H6). The committed api-surface.json must be what the source
+      # generates: an intended surface change is re-baselined in its OWN commit (Rule 5).
+      - name: Surface snapshot is current
+        run: bun run surface --check
+
+      # The gate itself, proven able to fail (best-practices 2.1).
+      - name: Compatibility gate self-test
+        run: bun run compat:selftest
+
+      # Floor since the last release + that release's tests against this source. Fails only on a
+      # stale snapshot here; the floor and red previous-tag tests BLOCK at `bun run bump` and on
+      # the release tag (publish.yml).
+      - name: Compatibility report against the last release
+        run: bun run compat
 
       # The export bundles for the browser AND no shipped file imports node: at the top level or
       # uses Deno./Bun. (the bundle alone cannot see a node: import: Bun stubs it out).

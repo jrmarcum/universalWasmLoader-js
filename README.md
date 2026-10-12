@@ -194,6 +194,19 @@ const callbacks: HostCallbacks = { envMul: (a, b) => (a as number) * (b as numbe
 const { scale } = await wasmImport("./mod.wasm", callbacks);
 ```
 
+## Versioning
+
+This package follows [Semantic Versioning 2.0.0](https://semver.org/). Every bump is gated: the
+release tooling compares the public API (`api-surface.json`, generated from the `.d.ts` files and
+the `SPEC.md` version) with the previous release, and refuses a bump lower than the change requires.
+It also runs the previous release's tests against the new code.
+
+### ⚠️ Breaking Changes
+
+| Version | What changed | How to migrate |
+| --- | --- | --- |
+| — | No breaking change since the compatibility gate began (1.1.0, 2026-10-12). | — |
+
 ## Publishing
 
 This package is published to JSR via GitHub Actions on tag push (`v*`). OIDC provenance is recorded by JSR automatically — no manual token required.
@@ -207,7 +220,8 @@ Bun is the development runtime; the code and tests also run on Node and Deno.
 
 ```sh
 bun install          # dev dependencies (TypeScript, @types/node, @std/assert)
-bun run gate         # type check, manifest check, browser check, tests on Bun
+bun run gate         # type check, manifest, API-surface snapshot, browser check, tests on Bun
+bun run compat       # API floor since the last release + that release's tests on this code
 bun run test:node    # the same tests on Node   (node --test; needs Node on PATH, see below)
 bun run test:deno    # the same tests on Deno   (deno test)
 bun run lts          # the tests on every current Node LTS line, through fnm

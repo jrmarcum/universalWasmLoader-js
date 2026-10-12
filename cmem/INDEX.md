@@ -41,5 +41,9 @@ reference test suite green (`bun run gate`, plus `bun run test:node` / `test:den
 | File | What it holds |
 | --- | --- |
 | [open-work.md](open-work.md) | **Start here for what is left**: dated items (Node 26 leg, `deno lint` replacement), unmeasured gaps, the workspace letters H6/H7, hand-overs |
+| [best-practices.md](best-practices.md) | METHOD rules: this repo's own (§ L) + the workspace's 28 ★ convergent rules, copied verbatim and stamped 2026-10-12 |
+| [working-rules.md](working-rules.md) | The checklist: git, the gate (= CI's steps), the tooling hard rules in their Bun form, boundaries |
+| [design-decisions.md](design-decisions.md) | 🔒 Invariants kept in full: the six design principles, the architectural decisions, the load path, WIT name conventions |
+| [compat-gate.md](compat-gate.md) | The compatibility gate (H6): surface snapshot, floor, previous-tag tests, where each runs, the inversion record |
 | [overview.md](overview.md) | What this loader is, the API surface, ABI it implements, conformance/SPEC status, test suite, and the release flow |
 | [bun-migration.md](bun-migration.md) | 2026-10-12 move off Deno to Bun (+ Node): `jsr.json` manifest, `bun run` scripts, `node:test` suite, CI matrix, the Node `file:` URL bug it surfaced, open items |
