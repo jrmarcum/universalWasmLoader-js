@@ -83,10 +83,14 @@ URL redirects); the local `origin` now points at the new URL.
 
 ## Open items
 
-1. **A real release** proves the new `publish.yml` (Bun gate + `deno publish` + `rekorLogId`).
-   Not done: nothing is tagged without the owner. The version line stays 1.0.8; unreleased on
-   `main`: the SPEC §10 work (minor) and the Node `file:` fix (patch), so the next release is a
-   minor.
+1. ✅ **Proved by a real release, 2026-10-12** (owner: "bump the release"): `bun run bump minor`
+   → 1.1.0 (`7452370`), `bun run release` tagged `v1.1.0` and pushed. Publish run 38287910144
+   succeeded, its `rekorLogId` step included; checked independently, cache-busted:
+   `api.jsr.io` shows 1.1.0 with **rekorLogId 3232619821**, latest 1.1.0, **score 100**. CI on
+   the same commit: success. Trap met: `scripts/publish.ts` spawns plain `git`, which refuses this
+   exFAT repo (dubious ownership). It was run with `GIT_CONFIG_COUNT=1`,
+   `GIT_CONFIG_KEY_0=safe.directory`, `GIT_CONFIG_VALUE_0=<repo path>` in its environment, so the
+   global git config stays untouched.
 2. **Node 26 becomes LTS on 2026-10-28**: add a CI leg (the loader is plain JS, so no
    type-stripping issue; `bun run lts` will name it as missing in fnm until installed).
 3. ✅ DECIDED (owner, 2026-10-12): **relative paths keep resolving against the LOADER's URL;

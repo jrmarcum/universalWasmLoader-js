@@ -69,9 +69,10 @@ JSR). The v1.0.6 tag hit exactly this when the workflow was briefly switched to 
 the one **at the tagged commit**, so the tag must point at a commit that already contains a `run:`-only
 `publish.yml`.
 
-**Published:** `@jrmarcum/universal-wasm-loader@1.0.8` is live on JSR — **score 100**
-(`hasProvenance: true`, `percentageDocumentedSymbols: 1.0`). The `run:`-only workflow delivered
-provenance cleanly.
+**Published:** `@jrmarcum/universal-wasm-loader@1.1.0` is live on JSR (2026-10-12) — **score 100**,
+provenance recorded (rekorLogId 3232619821). It was the first release from the Bun toolchain, and it
+contains SPEC §10 plus the Node `file:` fix ([bun-migration.md](bun-migration.md)). 1.0.8 before it
+also scored 100 with provenance. The `run:`-only workflow delivered provenance cleanly both times.
 
 ## Producer model + SPEC §10 capabilities (IMPLEMENTED 2026-06-15)
 
@@ -91,5 +92,5 @@ The loader consumes **reactor/library** modules — the `wasmtk modc` shape (no 
    `console.log` → imports `fd_write`; without the shim it would fail to instantiate). Suite now 26/26.
 
 `wasi.js`/`wasi.d.ts` added to the publish include-list (now in `jsr.json`). The public API is unchanged
-(`buildWasiShim` is internal). **Other ports SHOULD mirror both** (SPEC §10). Next publish: minor bump
-(additive) — `bun run bump minor`.
+(`buildWasiShim` is internal). **Other ports SHOULD mirror both** (SPEC §10). Released in 1.1.0
+(2026-10-12).
