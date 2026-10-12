@@ -57,6 +57,11 @@ jobs:
       - name: Surface snapshot is current
         run: bun run surface --check
 
+      # tests/ holds exactly the stamped reference fixtures (letter H7 / S4): the bytes every
+      # loader port copies. Regenerated only by scripts/regen-fixtures.ts from one wasmtk commit.
+      - name: Fixtures match their stamp
+        run: bun run fixtures
+
       # The gate itself, proven able to fail (best-practices 2.1).
       - name: Compatibility gate self-test
         run: bun run compat:selftest
