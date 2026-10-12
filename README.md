@@ -1,6 +1,6 @@
 # universal-wasm-loader
 
-A lightweight, zero-dependency WebAssembly loader for JavaScript, TypeScript, and the Web. Works in **Node.js 18+**, **Bun**, **Deno**, and all **modern browsers** without any configuration or bundler setup.
+A lightweight, zero-dependency WebAssembly loader for JavaScript, TypeScript, and the Web. Works in **Node.js 22.18+**, **Bun**, **Deno**, and all **modern browsers** without any configuration or bundler setup. Every release is tested on every current Node LTS line, on Bun and on Deno.
 
 Published to JSR with full build provenance for enhanced supply-chain security.
 
@@ -43,6 +43,16 @@ yarn dlx jsr add @jrmarcum/universal-wasm-loader
 ```sh
 vlt install jsr:@jrmarcum/universal-wasm-loader
 ```
+
+After installing, the import line is the same on every runtime:
+
+```javascript
+import { wasmImport } from "@jrmarcum/universal-wasm-loader";
+```
+
+`npx jsr add` and `bunx jsr add` write the dependency to `package.json` and the `@jsr` registry
+line to `.npmrc`; commit both. Importing `jsr:@jrmarcum/universal-wasm-loader` with no install
+step works on **Deno only**: Node and Bun do not resolve the `jsr:` prefix.
 
 ## Usage
 
@@ -92,10 +102,10 @@ console.log(scale(3.0, 4.0)); // 12.0
 
 ## How It Works
 
-1. Resolves the `.wasm` path relative to the calling module via `import.meta.url`
+1. Resolves a relative `.wasm` path against the **loader's own location** (its `import.meta.url`); a `URL` or absolute path is used as given (see [Where your modules live](#where-your-modules-live))
 2. Auto-detects the companion `.wit` file by replacing `.wasm` → `.wit`
 3. Applies the Canonical ABI (wasmtime) — bool and string types handled automatically
-4. Uses `WebAssembly.instantiateStreaming` for best performance; falls back to `fetch` + `arrayBuffer` for Node.js edge cases
+4. Reads a `file:` URL from disk on Node, Bun and Deno (Node's `fetch` does not accept `file:` URLs); otherwise uses `WebAssembly.instantiateStreaming` for best performance, falling back to `fetch` + `arrayBuffer`
 5. Returns an ABI-translated proxy keyed by camelCase WIT export names
 
 If no `.wit` file is found, raw `WebAssembly.Exports` are returned.
@@ -106,8 +116,22 @@ If no `.wit` file is found, raw `WebAssembly.Exports` are returned.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `wasmPath` | `string \| URL` | Path to the `.wasm` file, resolved relative to the calling module. Append `@N` to pin to a major version. |
+| `wasmPath` | `string \| URL` | Path or `URL` of the `.wasm` file. A relative string resolves against the loader's own location. Append `@N` to pin to a major version. |
 | `hostCallbacks` | `Record<string, Function>` | Host functions the WASM module calls into JS. Flat object, camelCase keys. |
+
+### Where your modules live
+
+Keep your `.wasm` modules (and their `.wit` files) in whatever folder suits your project, such as
+`wasm_modules/`, and pass a `URL` built from **your** file's `import.meta.url`:
+
+```javascript
+const { greet } = await wasmImport(new URL("./wasm_modules/mod.wasm", import.meta.url));
+const pinned = await wasmImport(new URL("./wasm_modules/mod.wasm@2", import.meta.url));
+```
+
+A plain relative string such as `"./mod.wasm"` resolves against the loader's own file. That is
+right only when the module sits next to the loader; from an installed package, that location is
+inside `node_modules`.
 
 **Returns:** `Promise<Record<string, Function>>` — ABI-translated proxy keyed by camelCase WIT export names, or raw `WebAssembly.Exports` if no `.wit` file is found.
 
@@ -174,4 +198,21 @@ const { scale } = await wasmImport("./mod.wasm", callbacks);
 
 This package is published to JSR via GitHub Actions on tag push (`v*`). OIDC provenance is recorded by JSR automatically — no manual token required.
 
-To release a new version: bump `version` in `deno.json`, then run `deno task publish`.
+To release a new version: `bun run bump [patch|minor|major]` (raises `version` in `jsr.json`, the
+package manifest), then `bun run release`.
+
+## Development
+
+Bun is the development runtime; the code and tests also run on Node and Deno.
+
+```sh
+bun install          # dev dependencies (TypeScript, @types/node, @std/assert)
+bun run gate         # type check, manifest check, browser check, tests on Bun
+bun run test:node    # the same tests on Node   (node --test; needs Node on PATH, see below)
+bun run test:deno    # the same tests on Deno   (deno test)
+bun run lts          # the tests on every current Node LTS line, through fnm
+```
+
+When no `node` is on `PATH`, `bun run` substitutes Bun for `node`, so `bun run test:node` would
+run Bun (it then fails with "Cannot use describe outside of the test runner"). Put a Node on
+`PATH` first, e.g. `fnm exec --using=24 bun run test:node`.

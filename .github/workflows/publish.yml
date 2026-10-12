@@ -14,7 +14,7 @@ jobs:
 
     steps:
       # NOTE: This org's Actions policy only permits actions owned by `jrmarcum`.
-      # Third-party actions (actions/checkout, denoland/setup-deno) cause a
+      # Third-party actions (actions/checkout, denoland/setup-deno, oven-sh/setup-bun) cause a
       # `startup_failure` — the workflow never runs a single step. Every step
       # here MUST therefore be a plain `run:` step. Do not reintroduce `uses:`.
       - name: Checkout
@@ -22,19 +22,47 @@ jobs:
           git clone --depth=1 --branch ${{ github.ref_name }} \
             https://x-access-token:${{ github.token }}@github.com/${{ github.repository }} .
 
+      # jsr.json is the package manifest since the Bun migration (2026-10-12; deno.json before).
+      - name: Verify jsr.json version matches tag
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION="$(jq -r .version jsr.json)"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag version ($TAG_VERSION) does not match jsr.json version ($PKG_VERSION)"
+            exit 1
+          fi
+          echo "Versions match: $TAG_VERSION"
+
+      # The gate is CI's `gates` job, on Bun (the project's runtime since 2026-10-12).
+      - name: Install Bun
+        run: |
+          curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.3"
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      - name: Gate (types, manifest, browser, tests)
+        run: |
+          bun install --frozen-lockfile
+          bun run gate
+
+      # Publishing to JSR still needs Deno: `bunx jsr publish` downloads Deno and runs
+      # `deno publish` as a subprocess, which skips the type check when a package.json exists
+      # and is the kind of indirection that has lost OIDC provenance before. So Deno is
+      # installed here and `deno publish` is called DIRECTLY. With no deno.json in the repo it
+      # reads jsr.json on its own.
       - name: Install Deno
         run: |
           curl -fsSL https://deno.land/install.sh | sh
           echo "$HOME/.deno/bin" >> $GITHUB_PATH
 
       - name: Lint
-        run: deno lint
+        run: deno lint --rules-exclude=no-sloppy-imports
 
       # Provenance requires a GitHub OIDC token. The `id-token: write` permission
       # above is what injects ACTIONS_ID_TOKEN_REQUEST_URL/_TOKEN into the runner.
       # If they are absent here despite the permission, an org/enterprise Actions
       # OIDC policy is blocking the token and `deno publish` will silently skip
-      # provenance (publish still succeeds). This makes that failure mode visible.
+      # provenance (publish still succeeds). This checks a PREREQUISITE, not the
+      # outcome: the last step below is the real check.
       - name: Check OIDC availability (provenance prerequisite)
         run: |
           if [ -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] && [ -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
@@ -59,3 +87,29 @@ jobs:
             --title "${GITHUB_REF_NAME}" \
             --target release/${GITHUB_REF_NAME} \
             --generate-notes
+
+      # THE evidence of provenance (design from binaryang/wasmtk): a green publish is not
+      # proof, because `deno publish` skips attestation non-fatally. Runs LAST: JSR versions
+      # are immutable, so this surfaces a problem loudly without blocking the release.
+      # JSR caches this endpoint, so every read is cache-busted.
+      - name: Verify provenance was recorded on JSR
+        run: |
+          PKG="$(jq -r .name jsr.json)"
+          SCOPE=${PKG%/*}; SCOPE=${SCOPE#@}
+          NAME=${PKG#*/}
+          VERSION=${GITHUB_REF_NAME#v}
+          URL="https://api.jsr.io/scopes/${SCOPE}/packages/${NAME}/versions/${VERSION}"
+          echo "Checking $URL"
+          for i in $(seq 1 12); do
+            BODY=$(curl -sf -H "Accept: application/json" -H "Cache-Control: no-cache" "${URL}?cb=${GITHUB_RUN_ID}-${i}" || true)
+            REKOR=$(printf '%s' "$BODY" | jq -r '.rekorLogId // empty' 2>/dev/null || true)
+            if [ -n "$REKOR" ]; then
+              echo "Provenance recorded — Rekor log ID: $REKOR"
+              echo "- provenance recorded, Rekor log ID $REKOR" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "  attempt $i: not recorded yet, retrying in 15s"
+            sleep 15
+          done
+          echo "::error::${PKG}@${VERSION} published WITHOUT provenance (no Rekor entry). The publish itself SUCCEEDED — the version exists and is immutable. Check the OIDC step above, the org/enterprise OIDC policy, and the JSR↔GitHub repo link."
+          exit 1

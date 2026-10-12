@@ -1,13 +1,9 @@
 {
+  "$schema": "https://jsr.io/schema/config-file.v1.json",
   "name": "@jrmarcum/universal-wasm-loader",
   "version": "1.0.8",
+  "license": "MIT",
   "exports": "./universal-wasm-loader.js",
-  "tasks": {
-    "test": "deno run --allow-read --allow-net tests/run_tests.js",
-    "update-version": "deno run --allow-read --allow-write scripts/sync-version.ts",
-    "bump": "deno run --allow-read --allow-write scripts/bump.ts",
-    "publish": "deno run --allow-read --allow-write --allow-run --allow-env scripts/publish.ts"
-  },
   "publish": {
     "include": [
       "universal-wasm-loader.js",

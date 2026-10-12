@@ -5,7 +5,7 @@
  * Loads a `.wasm` module like an ES import: it auto-detects the companion `.wit`
  * file and applies the Canonical ABI (wasmtime) so the caller receives a typed
  * proxy keyed by the module's export names. If no `.wit` is found, raw
- * {@linkcode WebAssembly.Exports} are returned. Works in Node.js 18+, Bun, Deno,
+ * {@linkcode WebAssembly.Exports} are returned. Works in Node.js 22.18+, Bun, Deno,
  * and modern browsers without any configuration.
  *
  * @example Basic usage
@@ -35,12 +35,42 @@ function callInitialize(rawExports) {
 }
 
 /**
+ * Read a `file:` URL from disk where the host has a file system (Node, Bun, Deno).
+ * Node's `fetch` rejects `file:` URLs, so they cannot go through `fetch` there.
+ * `node:fs/promises` is imported only here, when a `file:` URL is actually read,
+ * so the module still loads in a browser.
+ *
+ * Returns `undefined` when the URL is not a `file:` URL or the host has no
+ * `process` (a browser), so the caller falls back to `fetch`. Returns `null`
+ * when the file does not exist (the `fetch` 404 equivalent); any other read
+ * error is thrown.
+ * @param {URL} url
+ * @returns {Promise<Uint8Array | null | undefined>}
+ */
+async function readFileUrl(url) {
+  if (url.protocol !== "file:" || typeof globalThis.process === "undefined") return undefined;
+  const { readFile } = await import("node:fs/promises");
+  try {
+    return new Uint8Array(await readFile(url));
+  } catch (e) {
+    if (/** @type {{ code?: string }} */ (e)?.code === "ENOENT") return null;
+    throw e;
+  }
+}
+
+/**
  * Instantiate a .wasm file from a URL, returning raw exports.
  * @param {URL} url
  * @param {WebAssembly.Imports} importObject
  * @returns {Promise<WebAssembly.Exports>}
  */
 async function instantiateWasm(url, importObject) {
+  const fileBytes = await readFileUrl(url);
+  if (fileBytes === null) throw new Error(`wasmImport: file not found: ${url.href}`);
+  if (fileBytes !== undefined) {
+    const { instance } = await WebAssembly.instantiate(fileBytes, importObject);
+    return instance.exports;
+  }
   if (typeof WebAssembly.instantiateStreaming === "function") {
     try {
       const response = await fetch(url);
@@ -95,7 +125,7 @@ function assertVersion(rawExports, requestedVersion, wasmPath) {
 
 /**
  * A universal WebAssembly loader that mimics ESM import behavior.
- * Works in Node.js 18+, Bun, Deno, and all modern browsers.
+ * Works in Node.js 22.18+, Bun, Deno, and all modern browsers.
  *
  * Auto-detects the companion `.wit` file and applies the Canonical ABI.
  * If no `.wit` file is found, raw `WebAssembly.Exports` are returned.
@@ -131,11 +161,16 @@ export async function wasmImport(wasmPath, hostCallbacks = {}) {
   // Attempt WIT auto-detection; fall back to raw exports if absent
   const witUrl = new URL(wasmUrl.href.replace(/\.wasm$/, ".wit"));
   let witSrc = null;
-  try {
-    const res = await fetch(witUrl);
-    if (res.ok) witSrc = await res.text();
-  } catch (_e) {
-    // no WIT file available
+  const witBytes = await readFileUrl(witUrl);
+  if (witBytes !== undefined) {
+    if (witBytes !== null) witSrc = new TextDecoder().decode(witBytes);
+  } else {
+    try {
+      const res = await fetch(witUrl);
+      if (res.ok) witSrc = await res.text();
+    } catch (_e) {
+      // no WIT file available
+    }
   }
 
   // SPEC §10: always provide a minimal WASI-P1 shim so an I/O-using library

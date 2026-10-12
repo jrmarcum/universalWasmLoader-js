@@ -1,0 +1,129 @@
+# Continuous integration (Bun migration, 2026-10-12).
+#
+# Two jobs, because they answer different questions:
+#
+#   gates     — is the tree correct? types, the one-manifest rule, the browser rule, the
+#               suite on Bun, lint, and the publish manifest.
+#   runtimes  — does the loader actually run where the README says it does? Every current
+#               Node LTS line plus the Node floor, Bun, and Deno, the SAME test file on each.
+#
+# NOTE: This org's Actions policy only permits actions owned by `jrmarcum`. Third-party
+# actions (actions/checkout, oven-sh/setup-bun, actions/setup-node, denoland/setup-deno)
+# cause a `startup_failure` — the workflow never runs a single step. Every step here MUST
+# therefore be a plain `run:` step. Do not reintroduce `uses:`.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  gates:
+    name: Gates
+    runs-on: ubuntu-latest
+    steps:
+      # GITHUB_REF is refs/heads/<branch> on a push and refs/pull/<n>/merge on a pull request;
+      # both can be fetched by name, which a `git clone --branch` cannot do for the second.
+      - name: Checkout
+        run: |
+          git init -q .
+          git remote add origin https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+          git fetch -q --depth=1 origin "$GITHUB_REF"
+          git checkout -q FETCH_HEAD
+
+      - name: Install Bun
+        run: |
+          curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.3"
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      # `--frozen-lockfile`: a bun.lock that disagrees with package.json fails.
+      - name: Install dev dependencies
+        run: bun install --frozen-lockfile
+
+      # tsc over the published .d.ts files and scripts/, types: ["node"] pinned to the Node floor.
+      - name: Type-check
+        run: bun run check
+
+      # jsr.json is the one manifest: no deno.json carrying name/version, no package.json version.
+      - name: One manifest
+        run: bun run manifest
+
+      # The export bundles for the browser AND no shipped file imports node: at the top level or
+      # uses Deno./Bun. (the bundle alone cannot see a node: import: Bun stubs it out).
+      - name: Every export loads in a browser
+        run: bun run browser
+
+      - name: Test (Bun)
+        run: bun run test
+
+      - name: Install Deno
+        run: |
+          curl -fsSL https://deno.land/install.sh | sh
+          echo "$HOME/.deno/bin" >> $GITHUB_PATH
+
+      # `no-sloppy-imports` is excluded: it flags abi.d.ts's `import type … from "./wit-parser.js"`,
+      # which is correct TypeScript and which tsc accepts (cmem/bun-migration.md).
+      - name: Lint
+        run: deno lint --rules-exclude=no-sloppy-imports
+
+      - name: Verify publish manifest (dry run, no provenance)
+        run: deno publish --dry-run --allow-dirty
+
+  runtimes:
+    name: Tests on ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # EVERY current Node LTS line, plus the floor (owner, 2026-10-12: "We should support
+          # and test all currently available lts versions"). As of 2026-10-12: 22 "Jod"
+          # (maintenance to 2027-04-30) and 24 "Krypton". Node 26 enters LTS on 2026-10-28:
+          # add its leg then (`bun run lts` locally reads the schedule and will name it).
+          - name: Node 22.18 (floor)
+            node: '22.18'
+          - name: Node 22 (LTS, latest)
+            node: '22'
+          - name: Node 24 (LTS, latest)
+            node: '24'
+          - name: Bun 1.4.3
+            bun: true
+          - name: Deno 2.x
+            deno: true
+    steps:
+      - name: Checkout
+        run: |
+          git init -q .
+          git remote add origin https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}
+          git fetch -q --depth=1 origin "$GITHUB_REF"
+          git checkout -q FETCH_HEAD
+
+      # Bun is the package manager on every leg: it installs @std/assert from bun.lock.
+      - name: Install Bun and dev dependencies
+        run: |
+          curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.3"
+          "$HOME/.bun/bin/bun" install --frozen-lockfile
+
+      - name: Test (Node ${{ matrix.node }})
+        if: matrix.node
+        run: |
+          curl -fsSL https://fnm.vercel.app/install | bash -s -- --install-dir "$HOME/.fnm" --skip-shell
+          "$HOME/.fnm/fnm" install ${{ matrix.node }}
+          "$HOME/.fnm/fnm" exec --using=${{ matrix.node }} node --version
+          "$HOME/.fnm/fnm" exec --using=${{ matrix.node }} node --test tests/loader.test.js
+
+      - name: Test (Bun)
+        if: matrix.bun
+        run: |
+          "$HOME/.bun/bin/bun" --version
+          "$HOME/.bun/bin/bun" test ./tests/loader.test.js
+
+      - name: Test (Deno)
+        if: matrix.deno
+        run: |
+          curl -fsSL https://deno.land/install.sh | sh
+          "$HOME/.deno/bin/deno" --version
+          "$HOME/.deno/bin/deno" test --allow-read --allow-env tests/loader.test.js

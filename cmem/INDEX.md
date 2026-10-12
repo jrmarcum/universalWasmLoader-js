@@ -34,10 +34,11 @@ When the owner says **"look for code issues"** (or a clear synonym — "code aud
 duplicates); (3) bugs (wrong ABI marshalling, off-by-one pointer/length math, endianness, missing
 `cabi_post` calls, fall-back paths that mask errors); and (4) silent fall-throughs (returning a
 default instead of erroring). Report `file:line` + severity, fix the safe/clear ones, and keep the
-reference test suite green (`deno task test`).
+reference test suite green (`bun run gate`, plus `bun run test:node` / `test:deno`).
 
 ## Files
 
 | File | What it holds |
 | --- | --- |
 | [overview.md](overview.md) | What this loader is, the API surface, ABI it implements, conformance/SPEC status, test suite, and the release flow |
+| [bun-migration.md](bun-migration.md) | 2026-10-12 move off Deno to Bun (+ Node): `jsr.json` manifest, `bun run` scripts, `node:test` suite, CI matrix, the Node `file:` URL bug it surfaced, open items |

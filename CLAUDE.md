@@ -1,5 +1,15 @@
 # CLAUDE.md — universal-wasm-loader
 
+> **At session start, read `../../cmem/handoffs.md` for letters addressed to this repo.** The workspace
+> session (`../../cmem/INDEX.md`) reviews across the sibling repos and reports there; nothing is ever
+> written into this repo from outside. (owner directive, 2026-09-20)
+
+
+> **⚠️ TOOLCHAIN IS BUN SINCE 2026-10-12** — `deno.json` is gone; `jsr.json` is the manifest and
+> every `deno task …` below is now `bun run …` (`test`, `gate`, `bump`, `release`). The tests are
+> `tests/loader.test.js`. See [`cmem/bun-migration.md`](cmem/bun-migration.md); the sections below
+> are the pre-migration archive.
+
 > **⚠️ PORTABLE PROJECT MEMORY NOW LIVES IN `cmem/`** — start at [`cmem/INDEX.md`](cmem/INDEX.md).
 > When saving new project memory, write it into the matching `cmem/` topic file (and refresh its
 > pointer in `cmem/INDEX.md`). The **"update the project memory"** and **"look for code issues"**
