@@ -73,10 +73,20 @@ one either); the dropped rule list at that point is "recommended" minus what the
 - `deno publish` (JSR has no other publisher that keeps provenance; F2).
 - `deno lint` (above) and the Deno leg of the runtime matrix (consumers still use Deno).
 
+## Merged and pushed (2026-10-12)
+
+Merged `--no-ff` to `main` as `dd6a9ab` and pushed (owner: "proceed"). **CI run 38286753099
+passed on the first run, all six jobs:** Gates, plus tests on Node 22.18 (floor), Node 22, Node 24,
+Bun 1.4.3 and Deno 2.x. The `run:`-only workflow was accepted (no `startup_failure`).
+**The GitHub repo moved** to `jrmarcum/universalWasmLoader-js` (the old `universalWasmLoader`
+URL redirects); the local `origin` now points at the new URL.
+
 ## Open items
 
 1. **A real release** proves the new `publish.yml` (Bun gate + `deno publish` + `rekorLogId`).
-   Not done: nothing is tagged or pushed without the owner. The version line stays 1.0.8.
+   Not done: nothing is tagged without the owner. The version line stays 1.0.8; unreleased on
+   `main`: the SPEC §10 work (minor) and the Node `file:` fix (patch), so the next release is a
+   minor.
 2. **Node 26 becomes LTS on 2026-10-28**: add a CI leg (the loader is plain JS, so no
    type-stripping issue; `bun run lts` will name it as missing in fnm until installed).
 3. ✅ DECIDED (owner, 2026-10-12): **relative paths keep resolving against the LOADER's URL;
