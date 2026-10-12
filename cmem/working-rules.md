@@ -17,7 +17,7 @@ Rules, not lessons (the lessons are [best-practices.md](best-practices.md)). The
 ## The gate
 
 - **The local gate is CI's gate**: the `gates` steps of `.github/workflows/ci.yml` —
-  `bun run check`, `manifest`, `surface --check`, `compat:selftest`, `compat`, `browser`, `test`,
+  `bun run check`, `manifest`, `surface --check`, `fixtures`, `compat:selftest`, `compat`, `browser`, `test`,
   `lint`, `publish:dry` — plus the `runtimes` matrix (`bun run test:node` with a Node on PATH,
   `test:deno`; `bun run lts` for every Node LTS line). Run on the COMMITTED tree, after the last edit.
 - **Diff the output, not the exit code**: 24 tests on every runtime (2026-10-12); a lower count is a
