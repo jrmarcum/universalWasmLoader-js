@@ -17,9 +17,10 @@ jobs:
       # Third-party actions (actions/checkout, denoland/setup-deno, oven-sh/setup-bun) cause a
       # `startup_failure` — the workflow never runs a single step. Every step
       # here MUST therefore be a plain `run:` step. Do not reintroduce `uses:`.
+      # Full history and tags (no --depth): the compatibility gate compares with the previous tag.
       - name: Checkout
         run: |
-          git clone --depth=1 --branch ${{ github.ref_name }} \
+          git clone --branch ${{ github.ref_name }} \
             https://x-access-token:${{ github.token }}@github.com/${{ github.repository }} .
 
       # jsr.json is the package manifest since the Bun migration (2026-10-12; deno.json before).
@@ -39,10 +40,16 @@ jobs:
           curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.3"
           echo "$HOME/.bun/bin" >> $GITHUB_PATH
 
-      - name: Gate (types, manifest, browser, tests)
+      - name: Gate (types, manifest, surface, browser, tests)
         run: |
           bun install --frozen-lockfile
           bun run gate
+
+      # The compatibility gate on the tagged commit (letter H6): the jsr.json bump since the
+      # previous tag must meet the surface floor, and for a patch/minor the previous tag's tests
+      # must pass against this source. A failure here stops the publish.
+      - name: Compatibility gate (release)
+        run: bun run compat --release
 
       # Publishing to JSR still needs Deno: `bunx jsr publish` downloads Deno and runs
       # `deno publish` as a subprocess, which skips the type check when a package.json exists

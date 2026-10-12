@@ -6,17 +6,28 @@
  *           bun run bump minor      # minor:  1.0.5 → 1.1.0
  *           bun run bump major      # major:  1.0.5 → 2.0.0
  *
+ * GATED (compatibility gate, letter H6, 2026-10-12): before touching the version it runs
+ * `compat.ts` against the last release tag and REFUSES when the bump is below the surface floor,
+ * when a patch/minor meets red previous-tag tests, or when `api-surface.json` is stale.
+ *
  * Written on `node:` builtins only, so it runs on Bun, Node and Deno alike.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { judge, lastTag } from "./compat.ts";
 
 const manifestPath = fileURLToPath(new URL("../jsr.json", import.meta.url));
 
 const kind = (process.argv[2] ?? "patch").toLowerCase();
 if (kind !== "patch" && kind !== "minor" && kind !== "major") {
   console.error(`❌ bump: unknown release kind "${kind}" — use patch | minor | major`);
+  process.exit(1);
+}
+
+const problems = judge(lastTag(), kind);
+if (problems.length > 0) {
+  console.error(["", `❌ bump ${kind} refused:`, ...problems.map((p) => `  ${p}`)].join("\n"));
   process.exit(1);
 }
 

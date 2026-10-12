@@ -9,8 +9,11 @@
     "manifest": "bun scripts/check-manifest.ts",
     "browser": "bun scripts/check-browser.ts",
     "lts": "bun scripts/check-lts.ts",
+    "surface": "bun scripts/surface.ts",
+    "compat": "bun scripts/compat.ts",
+    "compat:selftest": "bun scripts/check-compat-gate.ts",
     "lint": "deno lint --rules-exclude=no-sloppy-imports",
-    "gate": "bun run check && bun run manifest && bun run browser && bun run test",
+    "gate": "bun run check && bun run manifest && bun run surface --check && bun run browser && bun run test",
     "bump": "bun scripts/bump.ts",
     "release": "bun scripts/publish.ts",
     "publish:dry": "deno publish --dry-run --allow-dirty"
