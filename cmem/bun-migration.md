@@ -96,8 +96,8 @@ URL redirects); the local `origin` now points at the new URL.
    other nine loaders were added too, plus the two vendored JS-loader repos under `-py/upstream`
    and `-rs/upstream`; `git rev-parse` succeeds in all eleven. The old `GithubProjects/` entries
    were left in place (harmless).
-2. **Node 26 becomes LTS on 2026-10-28**: add a CI leg (the loader is plain JS, so no
-   type-stripping issue; `bun run lts` will name it as missing in fnm until installed).
+2. ✅ **Node 26** (LTS on 2026-10-28): CI leg added 2026-10-12, after 26.11.1 passed 24/24
+   locally ([open-work.md](open-work.md)).
 3. ✅ DECIDED (owner, 2026-10-12): **relative paths keep resolving against the LOADER's URL;
    do not change the built-in behaviour.** `new URL(cleanPath, import.meta.url)` in `wasmImport`
    uses the loader module's own `import.meta.url`. Owner: "we should probably have all of the

@@ -102,14 +102,18 @@ jobs:
         include:
           # EVERY current Node LTS line, plus the floor (owner, 2026-10-12: "We should support
           # and test all currently available lts versions"). As of 2026-10-12: 22 "Jod"
-          # (maintenance to 2027-04-30) and 24 "Krypton". Node 26 enters LTS on 2026-10-28:
-          # add its leg then (`bun run lts` locally reads the schedule and will name it).
+          # (maintenance to 2027-04-30) and 24 "Krypton". Node 26 enters LTS on 2026-10-28; its
+          # leg runs from 2026-10-12 (24/24 locally on 26.11.1), so the day it becomes LTS is
+          # not the first time it is tested. The loader is plain JS, so 26's removal of
+          # --experimental-transform-types does not touch it.
           - name: Node 22.18 (floor)
             node: '22.18'
           - name: Node 22 (LTS, latest)
             node: '22'
           - name: Node 24 (LTS, latest)
             node: '24'
+          - name: Node 26 (LTS from 2026-10-28)
+            node: '26'
           - name: Bun 1.4.3
             bun: true
           - name: Deno 2.x
