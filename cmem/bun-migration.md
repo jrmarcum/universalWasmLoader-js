@@ -92,8 +92,10 @@ URL redirects); the local `origin` now points at the new URL.
    still named the OLD `GithubProjects/universalWasmLoader/…` path. For 1.1.0 it ran with
    `GIT_CONFIG_COUNT=1`, `GIT_CONFIG_KEY_0=safe.directory`, `GIT_CONFIG_VALUE_0=<repo path>` in its
    environment. **Fixed the same day:** the current path was added to the global config, as
-   binaryang's was, and plain `git` works here now. The other nine loaders' entries still point at
-   the old path (machine setting, not this repo's to change).
+   binaryang's was, and plain `git` works here now. At the owner's request the current paths of the
+   other nine loaders were added too, plus the two vendored JS-loader repos under `-py/upstream`
+   and `-rs/upstream`; `git rev-parse` succeeds in all eleven. The old `GithubProjects/` entries
+   were left in place (harmless).
 2. **Node 26 becomes LTS on 2026-10-28**: add a CI leg (the loader is plain JS, so no
    type-stripping issue; `bun run lts` will name it as missing in fnm until installed).
 3. ✅ DECIDED (owner, 2026-10-12): **relative paths keep resolving against the LOADER's URL;
