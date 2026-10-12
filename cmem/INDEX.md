@@ -40,5 +40,6 @@ reference test suite green (`bun run gate`, plus `bun run test:node` / `test:den
 
 | File | What it holds |
 | --- | --- |
+| [open-work.md](open-work.md) | **Start here for what is left**: dated items (Node 26 leg, `deno lint` replacement), unmeasured gaps, the workspace letters H6/H7, hand-overs |
 | [overview.md](overview.md) | What this loader is, the API surface, ABI it implements, conformance/SPEC status, test suite, and the release flow |
 | [bun-migration.md](bun-migration.md) | 2026-10-12 move off Deno to Bun (+ Node): `jsr.json` manifest, `bun run` scripts, `node:test` suite, CI matrix, the Node `file:` URL bug it surfaced, open items |

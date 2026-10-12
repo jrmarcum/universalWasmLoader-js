@@ -42,7 +42,8 @@ When no `.wit` file is found (404 or network error), the loader silently returns
 
 ### Pending work
 
-- **Test fixtures need recompilation** — `strings_50.wasm`, `booleans_50.wasm`, `imports_50.wasm` were compiled with the old `wasmtk wasic` protocol. They must be recompiled with `wasmtk` targeting the Canonical ABI before `deno task test` will pass on all 18 assertions. `math_50.wasm` works as-is (numeric only, no string encoding path).
+- See [`cmem/open-work.md`](cmem/open-work.md). (The old "fixtures need recompilation" item was
+  done 2026-06-15; the suite is 26 assertions, all passing on Bun, Node, Deno as of 2026-10-12.)
 
 ### Design principles (binding for all future work)
 

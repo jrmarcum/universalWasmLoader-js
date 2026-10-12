@@ -3,21 +3,27 @@
 The **JS/TS reference implementation** of the Universal WASM Loader (Project 2 of the polyglot
 ecosystem; see `wasmtk`). Published to JSR as `@jrmarcum/universal-wasm-loader` (renamed 2026-06-15
 from `@jrmarcum/universalwasmloader-js`; the manifest `name` — `jsr.json` since the 2026-10-12 Bun
-migration, `deno.json` before — must exactly equal the JSR package name or `deno publish` fails). All other language
-ports (`-rs`, `-py`, `-go`, `-jvm`, `-c`, `-dotnet`) must match this implementation's behavior and
-the cross-language `SPEC.md`.
+migration, `deno.json` before — must exactly equal the JSR package name or `deno publish` fails). The nine
+other-language ports (`-rs`, `-py`, `-go`, `-jvm`, `-c`, `-dotnet`, `-dart`, `-zig`, `-v`) must
+match this implementation's behavior and the cross-language `SPEC.md`, with ONE accepted
+JS-specific difference: path resolution (below).
 
 ## What it does
 
 Loads a `.wasm` module like an ESM import, auto-detecting its companion `.wit` and applying the
-Canonical ABI so the caller gets a typed JS proxy. Works in Deno, Node 22.18+, Bun, and browsers
-(Node with local files only since the 2026-10-12 `file:` URL fix — see [bun-migration.md](bun-migration.md)).
+Canonical ABI so the caller gets a typed JS proxy. Works in Deno, Node 22.18+, Bun, and browsers.
+Local-file loads on Node work only from 1.1.0: earlier releases failed there because Node's
+`fetch` rejects `file:` URLs ([bun-migration.md](bun-migration.md)).
 
 ## Public surface (`universal-wasm-loader.js`)
 
 - **`wasmImport(wasmPath, hostCallbacks?)`** — instantiate + return a proxy keyed by the WIT export
   names. Auto-detects `<path>.wit`; falls back to raw `WebAssembly.Exports` if absent. Supports an
   optional `@N` version-pin suffix (checked against the module's exported `version` global).
+  🔒 A relative STRING path resolves against the LOADER's own `import.meta.url`, not the caller's;
+  callers keep modules where they like and pass `new URL("./wasm_modules/mod.wasm", import.meta.url)`.
+  Owner decision 2026-10-12: keep this behaviour, and keep `SPEC.md`'s "relative to the calling
+  module" wording for the other ports ([bun-migration.md](bun-migration.md) item 3).
 - **`createSingleton(wasmPath, hostCallbacks?)`** — caches the load promise; returns the same
   instance on every call (CLI / bounded-call pattern).
 - **`InstancePool(wasmPath, hostCallbacks?, size=4)`** — `acquire()` / `release()` / `run(fn)` over
@@ -55,7 +61,8 @@ regenerated 2026-06-15 with the new ABI.
 `jsr.json` version is the package version (since 2026-10-12; `deno.json` before). `bun run bump
 [patch|minor|major]` raises it; `bun run release` commits, tags `vX.Y.Z`, and pushes → the
 `publish.yml` GitHub Action runs the Bun gate, then `deno publish` with OIDC provenance, then checks
-`rekorLogId` on `api.jsr.io`.
+`rekorLogId` on `api.jsr.io`. `bun run release` spawns plain `git`; that works on this exFAT drive
+because the repo's path is in the global `safe.directory` list (added 2026-10-12).
 Provenance requires the GitHub OIDC token to reach the runner — the workflow has an
 "Check OIDC availability" diagnostic step (added 2026-06-15, mirroring wasmtk) because that org's
 OIDC was found to be environmentally gated.
