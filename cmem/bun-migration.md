@@ -88,9 +88,12 @@ URL redirects); the local `origin` now points at the new URL.
    succeeded, its `rekorLogId` step included; checked independently, cache-busted:
    `api.jsr.io` shows 1.1.0 with **rekorLogId 3232619821**, latest 1.1.0, **score 100**. CI on
    the same commit: success. Trap met: `scripts/publish.ts` spawns plain `git`, which refuses this
-   exFAT repo (dubious ownership). It was run with `GIT_CONFIG_COUNT=1`,
-   `GIT_CONFIG_KEY_0=safe.directory`, `GIT_CONFIG_VALUE_0=<repo path>` in its environment, so the
-   global git config stays untouched.
+   exFAT repo (dubious ownership). Cause: the global `safe.directory` entries for every loader
+   still named the OLD `GithubProjects/universalWasmLoader/…` path. For 1.1.0 it ran with
+   `GIT_CONFIG_COUNT=1`, `GIT_CONFIG_KEY_0=safe.directory`, `GIT_CONFIG_VALUE_0=<repo path>` in its
+   environment. **Fixed the same day:** the current path was added to the global config, as
+   binaryang's was, and plain `git` works here now. The other nine loaders' entries still point at
+   the old path (machine setting, not this repo's to change).
 2. **Node 26 becomes LTS on 2026-10-28**: add a CI leg (the loader is plain JS, so no
    type-stripping issue; `bun run lts` will name it as missing in fnm until installed).
 3. ✅ DECIDED (owner, 2026-10-12): **relative paths keep resolving against the LOADER's URL;
