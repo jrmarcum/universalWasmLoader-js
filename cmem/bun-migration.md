@@ -79,10 +79,15 @@ one either); the dropped rule list at that point is "recommended" minus what the
    Not done: nothing is tagged or pushed without the owner. The version line stays 1.0.8.
 2. **Node 26 becomes LTS on 2026-10-28**: add a CI leg (the loader is plain JS, so no
    type-stripping issue; `bun run lts` will name it as missing in fnm until installed).
-3. **Relative paths resolve against the LOADER's URL, not the caller's** (pre-existing, not
-   touched): `new URL(cleanPath, import.meta.url)` in `wasmImport` uses the loader module's own
-   `import.meta.url`. From an installed package `wasmImport("./mod.wasm")` therefore looks inside
-   `node_modules/…`; the README's "resolved relative to the calling module" is not what happens.
-   Every test passes absolute `URL`s, so the suite cannot see it. 🗓️ OWNER: fix (an API-visible
-   behaviour change) or document "pass `new URL('./mod.wasm', import.meta.url)`".
+3. ✅ DECIDED (owner, 2026-10-12): **relative paths keep resolving against the LOADER's URL;
+   do not change the built-in behaviour.** `new URL(cleanPath, import.meta.url)` in `wasmImport`
+   uses the loader module's own `import.meta.url`. Owner: "we should probably have all of the
+   modules in the same place, but the end user may decide that they would rather have it a
+   wasm_module folder or some other folder." So the README now documents the actual behaviour,
+   and gives the pattern for a caller-chosen folder:
+   `wasmImport(new URL("./wasm_modules/mod.wasm", import.meta.url))`. Measured 2026-10-12 from
+   a scratch folder on Bun, Node 24 and Deno: plain load, `@1` pin and `@2` mismatch all behave.
+   **Still open, 🗓️ OWNER:** `SPEC.md` §2 (`wasmPath` row) still says "resolved relative to the
+   calling module", which is the contract for the nine other ports. It was left untouched, because
+   editing it changes that contract.
 4. **Browser RUN** (not just bundle) is unmeasured, as in binaryang.

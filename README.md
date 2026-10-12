@@ -102,7 +102,7 @@ console.log(scale(3.0, 4.0)); // 12.0
 
 ## How It Works
 
-1. Resolves the `.wasm` path relative to the calling module via `import.meta.url`
+1. Resolves a relative `.wasm` path against the **loader's own location** (its `import.meta.url`); a `URL` or absolute path is used as given (see [Where your modules live](#where-your-modules-live))
 2. Auto-detects the companion `.wit` file by replacing `.wasm` → `.wit`
 3. Applies the Canonical ABI (wasmtime) — bool and string types handled automatically
 4. Reads a `file:` URL from disk on Node, Bun and Deno (Node's `fetch` does not accept `file:` URLs); otherwise uses `WebAssembly.instantiateStreaming` for best performance, falling back to `fetch` + `arrayBuffer`
@@ -116,8 +116,22 @@ If no `.wit` file is found, raw `WebAssembly.Exports` are returned.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `wasmPath` | `string \| URL` | Path to the `.wasm` file, resolved relative to the calling module. Append `@N` to pin to a major version. |
+| `wasmPath` | `string \| URL` | Path or `URL` of the `.wasm` file. A relative string resolves against the loader's own location. Append `@N` to pin to a major version. |
 | `hostCallbacks` | `Record<string, Function>` | Host functions the WASM module calls into JS. Flat object, camelCase keys. |
+
+### Where your modules live
+
+Keep your `.wasm` modules (and their `.wit` files) in whatever folder suits your project, such as
+`wasm_modules/`, and pass a `URL` built from **your** file's `import.meta.url`:
+
+```javascript
+const { greet } = await wasmImport(new URL("./wasm_modules/mod.wasm", import.meta.url));
+const pinned = await wasmImport(new URL("./wasm_modules/mod.wasm@2", import.meta.url));
+```
+
+A plain relative string such as `"./mod.wasm"` resolves against the loader's own file. That is
+right only when the module sits next to the loader; from an installed package, that location is
+inside `node_modules`.
 
 **Returns:** `Promise<Record<string, Function>>` — ABI-translated proxy keyed by camelCase WIT export names, or raw `WebAssembly.Exports` if no `.wit` file is found.
 
