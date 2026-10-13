@@ -24,7 +24,7 @@ const ERRNO_SUCCESS = 0;
  * a browser/host loader.
  *
  * @param {{ current: WebAssembly.Memory | null }} memRef
- * @returns {Record<string, (...args: never[]) => number | void>}
+ * @returns {Record<string, (...args: never[]) => number>}
  */
 export function buildWasiShim(memRef) {
   /** The module's memory; set by the loader after instantiation. */

@@ -11,8 +11,10 @@
  * instantiation.
  *
  * @param memRef A mutable holder for the module's `WebAssembly.Memory`.
- * @returns The `wasi_snapshot_preview1` import namespace.
+ * @returns The `wasi_snapshot_preview1` import namespace. Each function returns a WASI errno
+ *   (`proc_exit` throws instead); i64 arguments (`clock_time_get`'s precision, `fd_seek`'s
+ *   offset) arrive as `bigint`.
  */
 export function buildWasiShim(
   memRef: { current: WebAssembly.Memory | null },
-): Record<string, (...args: number[]) => number | void>;
+): Record<string, (...args: (number | bigint)[]) => number>;

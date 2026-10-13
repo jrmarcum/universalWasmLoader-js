@@ -88,8 +88,8 @@ export function buildComponentImportEnv(importFuncs, userCallbacks) {
  */
 export function buildComponentExportProxy(exportFuncs, rawExports) {
   const exp = /** @type {Record<string,unknown>} */ (rawExports);
-  const mem = /** @type {WebAssembly.Memory} */ (exp["memory"]);
-  const cabiRealloc = /** @type {(origPtr:number,origLen:number,align:number,newLen:number)=>number} */ (exp["cabi_realloc"]);
+  const mem = /** @type {WebAssembly.Memory} */ (exp.memory);
+  const cabiRealloc = /** @type {(origPtr:number,origLen:number,align:number,newLen:number)=>number} */ (exp.cabi_realloc);
 
   /** @type {Record<string, (...args: unknown[]) => unknown>} */
   const proxy = {};
@@ -124,7 +124,7 @@ export function buildComponentExportProxy(exportFuncs, rawExports) {
         const retPtr = dv.getInt32(retArea, true);
         const retLen = dv.getInt32(retArea + 4, true);
         const str = _dec.decode(new Uint8Array(mem.buffer, retPtr, retLen));
-        const post = /** @type {((p:number)=>void)|undefined} */ (exp["cabi_post_" + fn.tsName]);
+        const post = /** @type {((p:number)=>void)|undefined} */ (exp[`cabi_post_${fn.tsName}`]);
         if (typeof post === "function") post(retArea);
         return str;
       }

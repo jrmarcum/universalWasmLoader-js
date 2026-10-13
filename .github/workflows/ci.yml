@@ -80,15 +80,16 @@ jobs:
       - name: Test (Bun)
         run: bun run test
 
+      # Biome (owner, 2026-10-13), replacing deno lint: the recommended preset plus the five rules
+      # deno lint's recommended set had that Biome leaves opt-in (biome.json; cmem/linting.md).
+      - name: Lint
+        run: bun run lint
+
+      # Deno only for the JSR dry run: publishing still needs `deno publish` (cmem/bun-migration.md).
       - name: Install Deno
         run: |
           curl -fsSL https://deno.land/install.sh | sh
           echo "$HOME/.deno/bin" >> $GITHUB_PATH
-
-      # `no-sloppy-imports` is excluded: it flags abi.d.ts's `import type … from "./wit-parser.js"`,
-      # which is correct TypeScript and which tsc accepts (cmem/bun-migration.md).
-      - name: Lint
-        run: deno lint --rules-exclude=no-sloppy-imports
 
       - name: Verify publish manifest (dry run, no provenance)
         run: deno publish --dry-run --allow-dirty

@@ -31,7 +31,7 @@ import { buildWasiShim } from "./wasi.js";
  * @param {WebAssembly.Exports} rawExports
  */
 function callInitialize(rawExports) {
-  const init = rawExports["_initialize"];
+  const init = rawExports._initialize;
   if (typeof init === "function") init();
 }
 
@@ -111,7 +111,7 @@ function parseVersionSuffix(wasmPath) {
  * @param {string} wasmPath
  */
 function assertVersion(rawExports, requestedVersion, wasmPath) {
-  const versionExport = /** @type {WebAssembly.Global|undefined} */ (rawExports["version"]);
+  const versionExport = /** @type {WebAssembly.Global|undefined} */ (rawExports.version);
   if (!versionExport || typeof versionExport.value !== "number") {
     throw new Error(
       `wasmImport: version @${requestedVersion} requested for "${wasmPath}" but the module does not export a "version" global`,
@@ -183,7 +183,7 @@ export async function wasmImport(wasmPath, hostCallbacks = {}) {
 
   if (!witSrc) {
     const rawExports = await instantiateWasm(wasmUrl, { wasi_snapshot_preview1: wasi });
-    wasiMemRef.current = /** @type {WebAssembly.Memory} */ (rawExports["memory"]) ?? null;
+    wasiMemRef.current = /** @type {WebAssembly.Memory} */ (rawExports.memory) ?? null;
     callInitialize(rawExports); // SPEC §10
     if (requestedVersion !== null) assertVersion(rawExports, requestedVersion, cleanPath);
     return rawExports;
@@ -195,7 +195,7 @@ export async function wasmImport(wasmPath, hostCallbacks = {}) {
   const imports = { wasi_snapshot_preview1: wasi };
   if (parsed.imports.length) imports.env = env;
   const rawExports = await instantiateWasm(wasmUrl, imports);
-  const mem = /** @type {WebAssembly.Memory | null} */ (rawExports["memory"]) ?? null;
+  const mem = /** @type {WebAssembly.Memory | null} */ (rawExports.memory) ?? null;
   memRef.current = mem; // for env string-param decoding
   wasiMemRef.current = mem; // for the WASI shim
   callInitialize(rawExports); // SPEC §10

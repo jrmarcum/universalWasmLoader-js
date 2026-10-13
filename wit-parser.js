@@ -62,8 +62,7 @@ function parseWitFuncs(body, keyword) {
     `\\b${keyword}\\s+([\\w-]+)\\s*:\\s*func\\s*\\(([^)]*)\\)(?:\\s*->\\s*([\\w-]+))?\\s*;`,
     "g",
   );
-  let m;
-  while ((m = re.exec(body)) !== null) {
+  for (const m of body.matchAll(re)) {
     // Groups 1 and 2 always participate when the regex matches; group 3 is optional.
     const name = /** @type {string} */ (m[1]);
     const params = parseWitParams(/** @type {string} */ (m[2]));

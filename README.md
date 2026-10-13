@@ -220,7 +220,8 @@ Bun is the development runtime; the code and tests also run on Node and Deno.
 
 ```sh
 bun install          # dev dependencies (TypeScript, @types/node, @std/assert)
-bun run gate         # type check, manifest, API-surface snapshot, browser check, tests on Bun
+bun run gate         # type check (incl. the shipped JS), Biome lint, manifest, API-surface
+                     # snapshot, fixture stamp, browser check, tests on Bun
 bun run compat       # API floor since the last release + that release's tests on this code
 bun run test:node    # the same tests on Node   (node --test; needs Node on PATH, see below)
 bun run test:deno    # the same tests on Deno   (deno test)

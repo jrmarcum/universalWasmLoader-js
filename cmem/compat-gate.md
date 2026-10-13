@@ -12,7 +12,7 @@ gate"): "backward compatible" is a gate result, never a judgment made at bump ti
 | Rule 3, BEHAVIOUR | `scripts/compat.ts` `previousTests` | same places; required green for a patch or minor |
 | Rule 4, deprecate first | README `### ⚠️ Breaking Changes` table | by hand, when a deprecation lands |
 | Rule 5, re-baseline alone | CI `surface --check` | an intended surface change is its own commit, with the reason |
-| Self-test | `scripts/check-compat-gate.ts` (25 checks) | `bun run compat:selftest`, CI |
+| Self-test | `scripts/check-compat-gate.ts` (26 checks since 2026-10-13; a malformed version now throws) | `bun run compat:selftest`, CI |
 
 **The surface of this loader:** the manifest `exports` map; every top-level declaration of the
 `.d.ts` each export names through `@ts-self-types` (one key per symbol, one per class member,

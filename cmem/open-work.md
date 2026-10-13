@@ -9,12 +9,10 @@ lists what is still open. Close an item by striking it here with the commit that
   24/24, `compat.ts`, the gate self-test and `how-to-use.js` all pass. CI leg added the same day.
   `bun run lts` adds it by itself on 2026-10-28 (it reads Node's schedule). Remaining on that
   date: confirm `bun run lts` shows 3 lines.
-- ⏳ **Replace `deno lint`** (owner, 2026-10-13: "Biome has better backing. We will use that.").
-  Step 1 ✅ 2026-10-13: TypeScript covers what it can — `tsconfig.json` adds the lint-like flags
-  and `checkJs` over the four shipped `.js` files, which nothing type-checked before (49 errors
-  under the repo's strict settings, fixed: JSDoc types against the published `.d.ts`; two crash
-  paths now throw a named error, below). Step 2: Biome in place of `deno lint`, with the list of
-  dropped rules. binaryang has not chosen a linter; Biome is this repo's choice.
+- ✅ **`deno lint` replaced, 2026-10-13** (owner: "Biome has better backing. We will use that."):
+  `tsc` with `checkJs` + lint-like flags, then Biome 2.5.15 with deno lint's recommended rules
+  mapped (56 in Biome's preset, 5 opted in, 2 dropped). [linting.md](linting.md). Tell binaryang
+  (it has not chosen a linter) — hand-over below.
 - **Found by `checkJs`, fixed 2026-10-13:** a string-param import or a WASI call that arrives
   while `memRef.current` is still `null` (a module with no exported `memory`, or a call from its
   start function) crashed with a bare `TypeError` on `null`; it now throws an `Error` naming the
@@ -43,6 +41,10 @@ lists what is still open. Close an item by striking it here with the commit that
   (hand-over table in [fixtures.md](fixtures.md)).
 
 ## To hand over (not this repo's to fix)
+
+- **binaryang (and wasmtk): the linter choice.** This repo moved to Biome 2.5.15 on 2026-10-13;
+  [linting.md](linting.md) has the verified deno-lint → Biome rule map and the `biome migrate`
+  trap (`"preset": "none"` silently disables every rule).
 
 - 🔴 **wasmtk 2.0.3 on JSR builds wrong fixtures** (`f64` for `s32` in `math_50.wit`; every bool
   function fails; 9/24 red). Fixed at wasmtk HEAD `f50c8e4`, unreleased. [fixtures.md](fixtures.md).
