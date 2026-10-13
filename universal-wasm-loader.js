@@ -18,6 +18,7 @@
  *
  * @module
  */
+/** @import { HostCallbacks, ModuleExports } from "./universal-wasm-loader.js" */
 import { parseWit } from "./wit-parser.js";
 import { buildComponentImportEnv, buildComponentExportProxy } from "./abi.js";
 import { buildWasiShim } from "./wasi.js";
@@ -45,7 +46,7 @@ function callInitialize(rawExports) {
  * when the file does not exist (the `fetch` 404 equivalent); any other read
  * error is thrown.
  * @param {URL} url
- * @returns {Promise<Uint8Array | null | undefined>}
+ * @returns {Promise<Uint8Array<ArrayBuffer> | null | undefined>}
  */
 async function readFileUrl(url) {
   if (url.protocol !== "file:" || typeof globalThis.process === "undefined") return undefined;
@@ -151,8 +152,8 @@ function assertVersion(rawExports, requestedVersion, wasmPath) {
  * ```
  *
  * @param {string | URL} wasmPath - Path or URL to the .wasm file. Append `@N` to pin to a version.
- * @param {Record<string, Function>} [hostCallbacks] - Host import callbacks keyed by camelCase WIT name.
- * @returns {Promise<WebAssembly.Exports | Record<string, Function>>}
+ * @param {HostCallbacks} [hostCallbacks] - Host import callbacks keyed by camelCase WIT name.
+ * @returns {Promise<WebAssembly.Exports | ModuleExports>}
  */
 export async function wasmImport(wasmPath, hostCallbacks = {}) {
   const { cleanPath, requestedVersion } = parseVersionSuffix(wasmPath);
@@ -190,6 +191,7 @@ export async function wasmImport(wasmPath, hostCallbacks = {}) {
 
   const parsed = parseWit(witSrc);
   const { env, memRef } = buildComponentImportEnv(parsed.imports, hostCallbacks);
+  /** @type {WebAssembly.Imports} */
   const imports = { wasi_snapshot_preview1: wasi };
   if (parsed.imports.length) imports.env = env;
   const rawExports = await instantiateWasm(wasmUrl, imports);
@@ -215,10 +217,11 @@ export async function wasmImport(wasmPath, hostCallbacks = {}) {
  * ```
  *
  * @param {string | URL} wasmPath
- * @param {Record<string, Function>} [hostCallbacks]
- * @returns {() => Promise<WebAssembly.Exports | Record<string, Function>>}
+ * @param {HostCallbacks} [hostCallbacks]
+ * @returns {() => Promise<WebAssembly.Exports | ModuleExports>}
  */
 export function createSingleton(wasmPath, hostCallbacks = {}) {
+  /** @type {Promise<WebAssembly.Exports | ModuleExports> | null} */
   let _promise = null;
   return () => {
     if (!_promise) _promise = wasmImport(wasmPath, hostCallbacks);
@@ -243,7 +246,7 @@ export function createSingleton(wasmPath, hostCallbacks = {}) {
 export class InstancePool {
   /**
    * @param {string | URL} wasmPath
-   * @param {Record<string, Function>} [hostCallbacks]
+   * @param {HostCallbacks} [hostCallbacks]
    * @param {number} [size] - Number of instances to maintain. Default: 4.
    */
   constructor(wasmPath, hostCallbacks = {}, size = 4) {
@@ -252,9 +255,9 @@ export class InstancePool {
     this._size = size;
     /** @type {Promise<void>|null} */
     this._initPromise = null;
-    /** @type {Array<WebAssembly.Exports | Record<string,Function>>} */
+    /** @type {Array<WebAssembly.Exports | ModuleExports>} */
     this._available = [];
-    /** @type {Array<(inst: WebAssembly.Exports | Record<string,Function>) => void>} */
+    /** @type {Array<(inst: WebAssembly.Exports | ModuleExports) => void>} */
     this._waiters = [];
   }
 
@@ -271,21 +274,23 @@ export class InstancePool {
   /**
    * Acquire an available instance. Resolves immediately if one is free; otherwise
    * waits until a concurrent caller releases one.
-   * @returns {Promise<WebAssembly.Exports | Record<string, Function>>}
+   * @returns {Promise<WebAssembly.Exports | ModuleExports>}
    */
   async acquire() {
     await this._ensureInit();
-    if (this._available.length > 0) return this._available.pop();
+    const free = this._available.pop();
+    if (free !== undefined) return free;
     return new Promise(resolve => this._waiters.push(resolve));
   }
 
   /**
    * Release an instance back to the pool.
-   * @param {WebAssembly.Exports | Record<string, Function>} instance
+   * @param {WebAssembly.Exports | ModuleExports} instance
    */
   release(instance) {
-    if (this._waiters.length > 0) {
-      this._waiters.shift()(instance);
+    const waiter = this._waiters.shift();
+    if (waiter !== undefined) {
+      waiter(instance);
     } else {
       this._available.push(instance);
     }
@@ -295,7 +300,7 @@ export class InstancePool {
    * Atomically acquire an instance, call `fn` with it, then release it.
    * The instance is released even if `fn` throws.
    * @template T
-   * @param {(instance: WebAssembly.Exports | Record<string, Function>) => T | Promise<T>} fn
+   * @param {(instance: WebAssembly.Exports | ModuleExports) => T | Promise<T>} fn
    * @returns {Promise<T>}
    */
   async run(fn) {

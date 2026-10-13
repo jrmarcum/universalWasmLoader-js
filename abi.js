@@ -1,4 +1,10 @@
 // @ts-self-types="./abi.d.ts"
+/** @import { WitFunc } from "./wit-parser.js" */
+
+/**
+ * A value crossing the WebAssembly boundary: `number` for i32 / f32 / f64, `bigint` for i64.
+ * @typedef {number | bigint} WasmValue
+ */
 
 const _enc = new TextEncoder();
 const _dec = new TextDecoder();
@@ -10,12 +16,13 @@ const _dec = new TextDecoder();
  * to `instance.exports.memory` so that string-param imports can decode
  * from linear memory.
  *
- * @param {Array<{name:string,tsName:string,params:Array,result:string|null}>} importFuncs
- * @param {Record<string,Function>|undefined} userCallbacks - keyed by camelCase tsName
- * @returns {{ env: Record<string,Function>, memRef: { current: WebAssembly.Memory|null } }}
+ * @param {WitFunc[]} importFuncs
+ * @param {Record<string, (...args: unknown[]) => unknown> | undefined} userCallbacks - keyed by camelCase tsName
+ * @returns {{ env: Record<string, (...args: WasmValue[]) => unknown>, memRef: { current: WebAssembly.Memory | null } }}
  */
 export function buildComponentImportEnv(importFuncs, userCallbacks) {
   const memRef = { current: /** @type {WebAssembly.Memory|null} */ (null) };
+  /** @type {Record<string, (...args: WasmValue[]) => unknown>} */
   const env = {};
 
   for (const fn of importFuncs) {
@@ -26,13 +33,21 @@ export function buildComponentImportEnv(importFuncs, userCallbacks) {
 
     if (hasStrParam) {
       env[wasmKey] = (...rawArgs) => {
+        if (memRef.current === null) {
+          throw new Error(
+            `wasmImport: import "${fn.name}" received a string before the module's memory was ` +
+              "available (the module exports no `memory`, or calls it from its start function)",
+          );
+        }
         const view = new Uint8Array(memRef.current.buffer);
+        /** @type {unknown[]} */
         const jsArgs = [];
         let i = 0;
         for (const p of params) {
           if (p.type === "string") {
-            const ptr = rawArgs[i++];
-            const len = rawArgs[i++];
+            // A string arrives as two i32s: (ptr, len).
+            const ptr = /** @type {number} */ (rawArgs[i++]);
+            const len = /** @type {number} */ (rawArgs[i++]);
             jsArgs.push(_dec.decode(view.subarray(ptr, ptr + len)));
           } else if (p.type === "bool") {
             jsArgs.push(rawArgs[i++] !== 0);
@@ -67,23 +82,25 @@ export function buildComponentImportEnv(importFuncs, userCallbacks) {
  * Build a typed JS proxy over raw WASM exports using the Canonical ABI (wasmtime) profile.
  * Requires the WASM module to export `cabi_realloc`.
  *
- * @param {Array<{name:string,tsName:string,params:Array,result:string|null}>} exportFuncs
+ * @param {WitFunc[]} exportFuncs
  * @param {WebAssembly.Exports} rawExports
- * @returns {Record<string,Function>}
+ * @returns {Record<string, (...args: unknown[]) => unknown>}
  */
 export function buildComponentExportProxy(exportFuncs, rawExports) {
   const exp = /** @type {Record<string,unknown>} */ (rawExports);
   const mem = /** @type {WebAssembly.Memory} */ (exp["memory"]);
   const cabiRealloc = /** @type {(origPtr:number,origLen:number,align:number,newLen:number)=>number} */ (exp["cabi_realloc"]);
 
+  /** @type {Record<string, (...args: unknown[]) => unknown>} */
   const proxy = {};
   for (const fn of exportFuncs) {
     const wasmFn = /** @type {(...a:unknown[])=>unknown} */ (exp[fn.tsName]);
 
     proxy[fn.tsName] = (...jsArgs) => {
+      /** @type {unknown[]} */
       const wasmArgs = [];
       for (let i = 0; i < fn.params.length; i++) {
-        const p = fn.params[i];
+        const p = /** @type {WitFunc["params"][number]} */ (fn.params[i]);
         const v = jsArgs[i];
         if (p.type === "string") {
           const bytes = _enc.encode(String(v));

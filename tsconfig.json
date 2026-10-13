@@ -2,9 +2,14 @@
   // The type check for Bun and Node (Bun migration, 2026-10-12). Neither runtime checks types,
   // and `deno check` is going away with Deno, so `tsc` is the check.
   //
-  // Scope: the published `.d.ts` files (what JSR serves to every consumer) and scripts/. The
-  // shipped `.js` is hand-written and typed by those `.d.ts` files through `@ts-self-types`, so it
-  // is not checked here.
+  // Scope: the published `.d.ts` files (what JSR serves to every consumer), the shipped `.js`
+  // (checkJs against its own JSDoc, since 2026-10-13: nothing checked it before), and scripts/.
+  // An import of "./x.js" resolves to x.d.ts first, so the shipped modules see each other through
+  // the PUBLISHED types, as a consumer does.
+  //
+  // Lint-like flags (owner, 2026-10-13: TypeScript covers what it can; Biome does the rest):
+  // noUnusedLocals, noUnusedParameters, allowUnreachableCode/allowUnusedLabels false,
+  // noImplicitOverride.
   //
   // `types: ["node"]` and NOT bun: code must run on Bun and Node (owner, 2026-10-12), so a
   // Bun-only API has to fail this check. @types/node is pinned to 22.18, the Node floor, so an
@@ -20,11 +25,25 @@
     "exactOptionalPropertyTypes": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "noImplicitOverride": true,
+    "allowJs": true,
+    "checkJs": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "skipLibCheck": false
   },
-  "include": ["*.d.ts", "scripts/**/*.ts"]
+  "include": [
+    "*.d.ts",
+    "universal-wasm-loader.js",
+    "abi.js",
+    "wit-parser.js",
+    "wasi.js",
+    "scripts/**/*.ts"
+  ]
 }

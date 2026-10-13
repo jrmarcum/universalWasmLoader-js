@@ -24,16 +24,30 @@ const ERRNO_SUCCESS = 0;
  * a browser/host loader.
  *
  * @param {{ current: WebAssembly.Memory | null }} memRef
- * @returns {Record<string, Function>}
+ * @returns {Record<string, (...args: never[]) => number | void>}
  */
 export function buildWasiShim(memRef) {
-  const dv = () =>
-    new DataView(/** @type {WebAssembly.Memory} */ (memRef.current).buffer);
-  const u8 = () =>
-    new Uint8Array(/** @type {WebAssembly.Memory} */ (memRef.current).buffer);
+  /** The module's memory; set by the loader after instantiation. */
+  const memory = () => {
+    if (memRef.current === null) {
+      throw new Error(
+        "wasmImport: a WASI call arrived before the module's memory was available " +
+          "(the module exports no `memory`, or calls WASI from its start function)",
+      );
+    }
+    return memRef.current;
+  };
+  const dv = () => new DataView(memory().buffer);
+  const u8 = () => new Uint8Array(memory().buffer);
 
   return {
-    /** fd_write(fd, iovs, iovs_len, nwritten) → errno. */
+    /**
+     * fd_write(fd, iovs, iovs_len, nwritten) → errno.
+     * @param {number} fd
+     * @param {number} iovsPtr
+     * @param {number} iovsLen
+     * @param {number} nwrittenPtr
+     */
     fd_write(fd, iovsPtr, iovsLen, nwrittenPtr) {
       const view = dv();
       const mem = u8();
@@ -56,12 +70,19 @@ export function buildWasiShim(memRef) {
       return ERRNO_SUCCESS;
     },
 
-    /** proc_exit(code) → never. A reactor library should not normally call this. */
+    /**
+     * proc_exit(code) → never. A reactor library should not normally call this.
+     * @param {number} code
+     */
     proc_exit(code) {
       throw new Error(`wasm proc_exit(${code})`);
     },
 
-    /** random_get(buf, len) → errno. Fills [buf, buf+len) with random bytes. */
+    /**
+     * random_get(buf, len) → errno. Fills [buf, buf+len) with random bytes.
+     * @param {number} buf
+     * @param {number} len
+     */
     random_get(buf, len) {
       const target = u8().subarray(buf, buf + len);
       if (typeof crypto !== "undefined" && crypto.getRandomValues) {
@@ -76,12 +97,21 @@ export function buildWasiShim(memRef) {
       return ERRNO_SUCCESS;
     },
 
-    /** clock_time_get(id, precision, time_ptr) → errno. Writes i64 ns since epoch. */
+    /**
+     * clock_time_get(id, precision, time_ptr) → errno. Writes i64 ns since epoch.
+     * @param {number} _id
+     * @param {bigint} _precision an i64, so a BigInt on the JS side
+     * @param {number} timePtr
+     */
     clock_time_get(_id, _precision, timePtr) {
       dv().setBigInt64(timePtr, BigInt(Date.now()) * 1000000n, true);
       return ERRNO_SUCCESS;
     },
 
+    /**
+     * @param {number} countPtr
+     * @param {number} sizePtr
+     */
     environ_sizes_get(countPtr, sizePtr) {
       const view = dv();
       view.setInt32(countPtr, 0, true);
@@ -91,6 +121,10 @@ export function buildWasiShim(memRef) {
     environ_get() {
       return ERRNO_SUCCESS;
     },
+    /**
+     * @param {number} countPtr
+     * @param {number} sizePtr
+     */
     args_sizes_get(countPtr, sizePtr) {
       const view = dv();
       view.setInt32(countPtr, 0, true);
@@ -106,7 +140,13 @@ export function buildWasiShim(memRef) {
     fd_fdstat_get() {
       return ERRNO_SUCCESS;
     },
-    /** fd_seek(fd, offset, whence, newoffset_ptr) → errno. */
+    /**
+     * fd_seek(fd, offset, whence, newoffset_ptr) → errno.
+     * @param {number} _fd
+     * @param {bigint} _offset an i64, so a BigInt on the JS side
+     * @param {number} _whence
+     * @param {number} newOffsetPtr
+     */
     fd_seek(_fd, _offset, _whence, newOffsetPtr) {
       dv().setBigInt64(newOffsetPtr, 0n, true);
       return ERRNO_SUCCESS;

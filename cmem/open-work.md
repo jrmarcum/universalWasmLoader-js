@@ -9,10 +9,17 @@ lists what is still open. Close an item by striking it here with the commit that
   24/24, `compat.ts`, the gate self-test and `how-to-use.js` all pass. CI leg added the same day.
   `bun run lts` adds it by itself on 2026-10-28 (it reads Node's schedule). Remaining on that
   date: confirm `bun run lts` shows 3 lines.
-- **Replace `deno lint` before Deno's end (~2027-10)** with a Deno-free linter; list the dropped
-  rules when doing so. CI runs `deno lint --rules-exclude=no-sloppy-imports`; why that rule began
-  firing on `abi.d.ts` is UNMEASURED. binaryang has not chosen a linter either.
-  [bun-migration.md](bun-migration.md) § "`deno lint` and `no-sloppy-imports`".
+- ⏳ **Replace `deno lint`** (owner, 2026-10-13: "Biome has better backing. We will use that.").
+  Step 1 ✅ 2026-10-13: TypeScript covers what it can — `tsconfig.json` adds the lint-like flags
+  and `checkJs` over the four shipped `.js` files, which nothing type-checked before (49 errors
+  under the repo's strict settings, fixed: JSDoc types against the published `.d.ts`; two crash
+  paths now throw a named error, below). Step 2: Biome in place of `deno lint`, with the list of
+  dropped rules. binaryang has not chosen a linter; Biome is this repo's choice.
+- **Found by `checkJs`, fixed 2026-10-13:** a string-param import or a WASI call that arrives
+  while `memRef.current` is still `null` (a module with no exported `memory`, or a call from its
+  start function) crashed with a bare `TypeError` on `null`; it now throws an `Error` naming the
+  import and the likely cause. Probed before/after; no other behaviour changed (surface floor:
+  patch).
 - **Publishing still needs Deno** (`deno publish`, F2 of binaryang's exit guide). By design; JSR's
   to solve before ~2027-10. Re-check when JSR ships a non-Deno publisher that keeps provenance.
 
