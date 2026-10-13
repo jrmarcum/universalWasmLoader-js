@@ -40,7 +40,8 @@ reference test suite green (`bun run gate`, plus `bun run test:node` / `test:den
 
 | File | What it holds |
 | --- | --- |
-| [open-work.md](open-work.md) | **Start here for what is left**: dated items (Node 26 leg, `deno lint` replacement), unmeasured gaps, the workspace letters H6/H7, hand-overs |
+| [open-work.md](open-work.md) | **Start here for what is left**: dated items, unmeasured gaps, the workspace letters H6/H7, hand-overs |
+| [linting.md](linting.md) | `tsc` (`checkJs` + lint-like flags) and Biome 2.5.15: config, the deno-lint rule map, the `biome migrate` trap |
 | [best-practices.md](best-practices.md) | METHOD rules: this repo's own (§ L) + the workspace's 28 ★ convergent rules, copied verbatim and stamped 2026-10-12 |
 | [working-rules.md](working-rules.md) | The checklist: git, the gate (= CI's steps), the tooling hard rules in their Bun form, boundaries |
 | [design-decisions.md](design-decisions.md) | 🔒 Invariants kept in full: the six design principles, the architectural decisions, the load path, WIT name conventions |

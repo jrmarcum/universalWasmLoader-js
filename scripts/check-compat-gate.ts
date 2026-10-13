@@ -37,17 +37,19 @@ function throws(fn: () => unknown, pattern: RegExp): boolean {
   }
 }
 
+const F = "export declare function f(): void;";
+const T = "export type T = number;";
 const base: Surface = {
   spec: "3.0.0",
   exports: { ".": "./a.js" },
-  symbols: { "function f": "export declare function f(): void;", "type T": "export type T = number;" },
+  symbols: { "function f": F, "type T": T },
 };
 const floor = (s: Partial<Surface>): Kind => floorOf(base, { ...base, ...s }).floor;
 
 // Rule 2 — the floor.
 check("identical surface → patch", () => floor({}) === "patch");
 check("symbol added → minor", () => floor({ symbols: { ...base.symbols, "function g": "g" } }) === "minor");
-check("symbol removed → major", () => floor({ symbols: { "type T": base.symbols["type T"]! } }) === "major");
+check("symbol removed → major", () => floor({ symbols: { "type T": T } }) === "major");
 check("symbol changed → major", () => floor({ symbols: { ...base.symbols, "type T": "export type T = string;" } }) === "major");
 check("export added → minor", () => floor({ exports: { ...base.exports, "./x": "./x.js" } }) === "minor");
 check("export removed → major", () => floor({ exports: {} }) === "major");
@@ -55,9 +57,10 @@ check("SPEC patch → patch", () => floor({ spec: "3.0.1" }) === "patch");
 check("SPEC minor → minor", () => floor({ spec: "3.1.0" }) === "minor");
 check("SPEC major → major", () => floor({ spec: "4.0.0" }) === "major");
 check("SPEC lowered → major", () => floor({ spec: "2.9.0" }) === "major");
-check("added + removed → major", () => floor({ symbols: { "function f": base.symbols["function f"]!, "function g": "g" } }) === "major");
+check("added + removed → major", () => floor({ symbols: { "function f": F, "function g": "g" } }) === "major");
 check("reasons name the symbol", () =>
-  floorOf(base, { ...base, symbols: { "type T": base.symbols["type T"]! } }).reasons.some((r) => r.includes("function f")));
+  floorOf(base, { ...base, symbols: { "type T": T } }).reasons.some((r) => r.includes("function f")));
+check("malformed version throws", () => throws(() => bumpKind("1.1", "1.2.0"), /not an X\.Y\.Z/));
 
 // Version arithmetic.
 check("1.0.8 → 1.0.9 is patch", () => bumpKind("1.0.8", "1.0.9") === "patch");

@@ -58,7 +58,7 @@ test runner". It fails loudly, so it cannot pass by mistake. With a Node on PATH
 (`fnm exec --using=24 bun run test:node`) it is 24/24. CI's Node legs call
 `fnm exec … node --test` directly, never through `bun run`.
 
-## `deno lint` and `no-sloppy-imports`
+## `deno lint` and `no-sloppy-imports` (🔁 superseded 2026-10-13: Biome replaced `deno lint`, [linting.md](linting.md))
 
 In this tree `deno lint` (2.9.7) reports `no-sloppy-imports` on `abi.d.ts`'s
 `import type { WitFunc } from "./wit-parser.js"`. `main` linted clean. The trigger did not
@@ -71,7 +71,7 @@ one either); the dropped rule list at that point is "recommended" minus what the
 ## Still on Deno, by design
 
 - `deno publish` (JSR has no other publisher that keeps provenance; F2).
-- `deno lint` (above) and the Deno leg of the runtime matrix (consumers still use Deno).
+- The Deno leg of the runtime matrix (consumers still use Deno). (`deno lint` until 2026-10-13.)
 
 ## Merged and pushed (2026-10-12)
 

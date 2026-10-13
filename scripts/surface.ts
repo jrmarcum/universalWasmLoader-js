@@ -104,13 +104,13 @@ function declarations(file: string, src: string, add: (key: string, text: string
     const m = stmt.match(
       /^(export\s+)?(?:declare\s+)?(?:abstract\s+)?(function|class|interface|type|const|let|var|enum|namespace)\s+([A-Za-z_$][\w$]*)/,
     );
-    if (!m) throw new Error(`${file}: cannot key declaration "${stmt.slice(0, 80)}"`);
-    const [, exported, kind, name] = m;
+    const [, exported, kind, name] = m ?? [];
+    if (!kind || !name) throw new Error(`${file}: cannot key declaration "${stmt.slice(0, 80)}"`);
     const key = `${exported ? "" : "(internal) "}${kind} ${name}`;
     if (kind === "class" || kind === "interface") {
       const open = stmt.indexOf("{");
       add(key, normalize(stmt.slice(0, open)));
-      members(name!, stmt.slice(open + 1, stmt.lastIndexOf("}")), add);
+      members(name, stmt.slice(open + 1, stmt.lastIndexOf("}")), add);
     } else {
       add(key, normalize(stmt));
     }
@@ -136,9 +136,9 @@ export function surfaceOf(root: string): Surface {
   const seen = new Set<string>();
   for (const [sub, file] of Object.entries(exports)) {
     const js = readFileSync(join(root, file), "utf8");
-    const pragma = js.match(/@ts-self-types\s*=\s*"([^"]+)"/);
-    if (!pragma) throw new Error(`export "${sub}" (${file}) has no @ts-self-types: its surface is unknown`);
-    const dts = join(file, "..", pragma[1]!).replace(/\\/g, "/");
+    const selfTypes = js.match(/@ts-self-types\s*=\s*"([^"]+)"/)?.[1];
+    if (!selfTypes) throw new Error(`export "${sub}" (${file}) has no @ts-self-types: its surface is unknown`);
+    const dts = join(file, "..", selfTypes).replace(/\\/g, "/");
     if (seen.has(dts)) continue;
     seen.add(dts);
     declarations(dts, readFileSync(join(root, dts), "utf8"), add);

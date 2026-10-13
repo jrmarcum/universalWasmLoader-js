@@ -26,16 +26,24 @@ import { render, type Surface, surfaceOf } from "./surface.ts";
 
 export type Kind = "patch" | "minor" | "major";
 export const RANK: Record<Kind, number> = { patch: 0, minor: 1, major: 2 };
-const KINDS: Kind[] = ["patch", "minor", "major"];
 
 export const root = fileURLToPath(new URL("..", import.meta.url));
 
+/** `X.Y.Z` as three numbers; throws on anything else. */
+function parseVersion(v: string): [number, number, number] {
+  const m = v.match(/^(\d+)\.(\d+)\.(\d+)$/);
+  if (!m) throw new Error(`not an X.Y.Z version: "${v}"`);
+  return [Number(m[1]), Number(m[2]), Number(m[3])];
+}
+
 /** The level by which `to` raises `from` (X.Y.Z); throws when it does not raise it. */
 export function bumpKind(from: string, to: string): Kind {
-  const [a, b] = [from, to].map((v) => v.split(".").map(Number));
-  for (let i = 0; i < 3; i++) {
-    if (b![i]! > a![i]!) return KINDS[2 - i]!;
-    if (b![i]! < a![i]!) break;
+  const a = parseVersion(from);
+  const b = parseVersion(to);
+  const levels: [number, number, Kind][] = [[a[0], b[0], "major"], [a[1], b[1], "minor"], [a[2], b[2], "patch"]];
+  for (const [was, now, kind] of levels) {
+    if (now > was) return kind;
+    if (now < was) break;
   }
   throw new Error(`version ${to} does not raise ${from}`);
 }
@@ -121,10 +129,9 @@ export function previousTests(tag: string): { ok: boolean; summary: string } {
 
     const bun = process.versions.bun !== undefined;
     const exe = process.execPath;
-    let r;
     if (existsSync(join(run, "tests", "loader.test.js"))) {
       const file = join(run, "tests", "loader.test.js");
-      r = bun
+      const r = bun
         ? spawnSync(exe, ["test", file], { cwd: root, encoding: "utf8" })
         : spawnSync(exe, ["--test", "--test-reporter=tap", file], { cwd: root, encoding: "utf8" });
       const out = `${r.stdout}\n${r.stderr}`;
@@ -134,7 +141,7 @@ export function previousTests(tag: string): { ok: boolean; summary: string } {
       return { ok, summary: `${tag} tests/loader.test.js: ${pass} pass, ${fail} fail (exit ${r.status})` };
     }
     if (existsSync(join(run, "tests", "run_tests.js"))) {
-      r = spawnSync(exe, [join(run, "tests", "run_tests.js")], { cwd: root, encoding: "utf8" });
+      const r = spawnSync(exe, [join(run, "tests", "run_tests.js")], { cwd: root, encoding: "utf8" });
       const m = `${r.stdout}\n${r.stderr}`.match(/(\d+) tests: (\d+) passed, (\d+) failed/);
       const ok = r.status === 0 && m !== null && Number(m[2]) > 0 && m[3] === "0";
       return { ok, summary: `${tag} tests/run_tests.js: ${m ? `${m[2]} of ${m[1]} passed` : "no summary line"} (exit ${r.status})` };
@@ -192,7 +199,8 @@ if (isMain) {
     problems = judge(tag, kind);
   } else {
     const at = process.argv.indexOf("--against");
-    problems = judge(at > 0 && process.argv[at + 1] ? process.argv[at + 1]! : lastTag(), null);
+    const against = at > 0 ? process.argv[at + 1] : undefined;
+    problems = judge(against || lastTag(), null);
   }
   if (problems.length > 0) {
     console.log(["", "BLOCKED:", ...problems.map((p) => `  ${p}`)].join("\n"));

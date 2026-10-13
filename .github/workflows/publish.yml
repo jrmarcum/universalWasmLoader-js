@@ -40,7 +40,7 @@ jobs:
           curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.3"
           echo "$HOME/.bun/bin" >> $GITHUB_PATH
 
-      - name: Gate (types, manifest, surface, browser, tests)
+      - name: Gate (types, lint, manifest, surface, fixtures, browser, tests)
         run: |
           bun install --frozen-lockfile
           bun run gate
@@ -60,9 +60,6 @@ jobs:
         run: |
           curl -fsSL https://deno.land/install.sh | sh
           echo "$HOME/.deno/bin" >> $GITHUB_PATH
-
-      - name: Lint
-        run: deno lint --rules-exclude=no-sloppy-imports
 
       # Provenance requires a GitHub OIDC token. The `id-token: write` permission
       # above is what injects ACTIONS_ID_TOKEN_REQUEST_URL/_TOKEN into the runner.
