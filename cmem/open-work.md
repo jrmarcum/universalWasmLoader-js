@@ -42,9 +42,11 @@ lists what is still open. Close an item by striking it here with the commit that
 
 ## To hand over (not this repo's to fix)
 
-- **binaryang (and wasmtk): the linter choice.** This repo moved to Biome 2.5.15 on 2026-10-13;
-  [linting.md](linting.md) has the verified deno-lint → Biome rule map and the `biome migrate`
-  trap (`"preset": "none"` silently disables every rule).
+- 🔒 **binaryang and wasmtk switch to Biome too** (owner, 2026-10-13: "We are making the same
+  switch for those projects also."). Their own sessions do it; this repo's
+  [linting.md](linting.md) is the reference: the verified deno-lint → Biome rule map (and which 5
+  rules to opt in), the linter-only config, and the `biome migrate` trap (`"preset": "none"`
+  silently disables every rule — prove the rules fire on a probe file after any migration).
 
 - 🔴 **wasmtk 2.0.3 on JSR builds wrong fixtures** (`f64` for `s32` in `math_50.wit`; every bool
   function fails; 9/24 red). Fixed at wasmtk HEAD `f50c8e4`, unreleased. [fixtures.md](fixtures.md).

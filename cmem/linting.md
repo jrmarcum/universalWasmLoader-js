@@ -1,7 +1,9 @@
 # Linting and type checking (2026-10-13)
 
 🔒 Owner, 2026-10-13: TypeScript covers what it can; **Biome** replaces `deno lint` ("Biome has
-better backing. We will use that."). Bun 1.4.3 has no linter (`bun lint` outside a project:
+better backing. We will use that."), and **binaryang and wasmtk make the same switch** ("We are
+making the same switch for those projects also"), each in its own session, with this file as
+the reference. Bun 1.4.3 has no linter (`bun lint` outside a project:
 "Script not found"); it has `bun check`, a type checker equivalent to `tsc` (not adopted: this
 repo's own `check` script shadows the name; unmeasured).
 
