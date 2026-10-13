@@ -15,7 +15,7 @@ JSR stays the source of the package.** The cross-package guide is binaryang's
 | Type check | `deno publish`'s own check | `tsc -p tsconfig.json` over the published `.d.ts` + `scripts/`; `types: ["node"]` so a `Bun.*` API fails it |
 | Tests | `tests/run_tests.js`, a plain script, 26 assertions | `tests/loader.test.js` on `node:test` + `@std/assert`: the same 26 assertions as **24 tests** (two pairs are one sequence each). Runs unchanged under `bun test`, `node --test`, `deno test` |
 | Scripts | `Deno.*` | `node:` builtins only (run on Bun, Node, Deno). `sync-version.ts` (a no-op) deleted — one manifest, nothing to sync |
-| CI | publish job only, `deno lint` | `ci.yml`: gates (tsc, manifest, browser, Bun tests, deno lint, publish dry run) + runtimes matrix (Node 22.18 floor, 22, 24, Bun 1.4.3, Deno 2.x). `publish.yml`: Bun gate first, then `deno publish` DIRECTLY (F2), then the `rekorLogId` provenance check |
+| CI | publish job only, `deno lint` | `ci.yml`: gates (tsc, manifest, browser, Bun tests, deno lint — 🔁 Biome since 2026-10-13, publish dry run) + runtimes matrix (Node 22.18 floor, 22, 24, Bun 1.4.3, Deno 2.x). `publish.yml`: Bun gate first, then `deno publish` DIRECTLY (F2), then the `rekorLogId` provenance check |
 | CI form | `run:` steps only | **still `run:` steps only** — this org's policy (see [overview.md](overview.md)); Bun via `bun.sh/install`, Node via the fnm install script, Deno via `deno.land/install.sh` |
 
 ## A real bug the migration surfaced: the loader never worked on Node with local files

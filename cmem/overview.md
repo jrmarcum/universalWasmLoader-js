@@ -52,9 +52,11 @@ re-aligned to SPEC 3.0.0.
 `bun run test` (also `test:node`, `test:deno`) runs `tests/loader.test.js` (`node:test` +
 `@std/assert`, since 2026-10-12; `tests/run_tests.js` before) against fixtures produced by `wasmtk`
 (`math_50` / `booleans_50` / `strings_50` / `imports_50` / `wasi_io_50`, plus the hand-written
-`init_check`) and the lifecycle scenarios (`createSingleton`, `InstancePool`). Current (2026-10-12):
-**26 assertions in 24 tests, 24/24 on Bun 1.4.3, Node 22 + 24, Deno 2.9.7**. `strings_50.wasm` was
-regenerated 2026-06-15 with the new ABI.
+`init_check`) and the lifecycle scenarios (`createSingleton`, `InstancePool`). Current (2026-10-13):
+**26 assertions in 24 tests, 24/24 on Bun 1.4.3, Node 22, 24 and 26, Deno 2.9.7**. The fixtures are
+the stamped reference set every port copies, regenerated 2026-10-12 from wasmtk `f50c8e4`
+([fixtures.md](fixtures.md)). The shipped `.js` is type-checked (`checkJs`) and linted by Biome
+since 2026-10-13 ([linting.md](linting.md)).
 
 ## Release flow
 

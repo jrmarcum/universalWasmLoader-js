@@ -17,7 +17,7 @@ built them, the git blob id of each source, and the sha256 of every fixture file
 
 🔒 Owner, 2026-10-12: the reference set comes from **wasmtk HEAD `f50c8e4`**
 (`v2.0.3-64-gf50c8e419a0`, committed 2026-10-09), "after a push": the owner pushes wasmtk's
-`main` so the stamped commit is pinnable. ⏳ **On 2026-10-12 `f50c8e4` was on NO remote branch**
+`main` so the stamped commit is pinnable. ⏳ **On 2026-10-12, and again 2026-10-13, `f50c8e4` was on NO remote branch**
 (`git branch -r --contains` empty). Re-check before telling the ports to copy.
 
 Measured the same day, the same five sources built three ways:
